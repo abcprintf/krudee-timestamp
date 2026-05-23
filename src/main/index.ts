@@ -6,6 +6,7 @@ import { registerStudentPhotoProtocol } from './photos'
 import { startScheduler, stopScheduler } from './sync/scheduler'
 import { getConfig } from './config'
 import { setAutoLaunch } from './auto-launch'
+import { initUpdater } from './updater'
 
 protocol.registerSchemesAsPrivileged([{ scheme: 'student-photo', privileges: { standard: true, secure: true, supportFetchAPI: true } }])
 let mainWindow: BrowserWindow | null = null
@@ -27,6 +28,7 @@ app.whenReady().then(async () => {
   if (getConfig().auto_start === 'true') await setAutoLaunch(true)
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
   createWindow()
+  if (mainWindow) initUpdater(mainWindow)
 })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
 app.on('before-quit', () => { stopScheduler(); closeDb() })

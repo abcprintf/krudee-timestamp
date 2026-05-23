@@ -1,5 +1,6 @@
 import { app, ipcMain } from 'electron'
 import { randomUUID } from 'node:crypto'
+import { autoUpdater } from 'electron-updater'
 import { apiFetch, registerDevice } from './api/client'
 import { clearDeviceConfig, getConfig, isConfigured, setConfigValue, setConfigValues, type KioskRole } from './config'
 import { getDb } from './db/client'
@@ -83,4 +84,5 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('admin:settings:update', async (_event, payload: Partial<Record<string, string>>) => { setConfigValues(payload); if (typeof payload.auto_start === 'string') await setAutoLaunch(payload.auto_start === 'true'); return getConfig() })
   ipcMain.handle('admin:history', () => getDb().prepare(`SELECT scan_events.*, students.first_name, students.last_name, students.nickname, students.classroom_name FROM scan_events LEFT JOIN students ON students.id = scan_events.matched_student_id ORDER BY scan_events.scanned_at DESC LIMIT 100`).all())
   ipcMain.handle('admin:reset-device', () => { clearDeviceConfig(); getDb().prepare('DELETE FROM students').run(); getDb().prepare('DELETE FROM scan_events').run(); setConfigValue('base_url', 'http://localhost:3000'); return { ok: true } })
+  ipcMain.handle('updater:install', () => { autoUpdater.quitAndInstall() })
 }
