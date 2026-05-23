@@ -28,3 +28,4 @@ publish:
   provider: github
   owner: abcprintf
   repo: krudee-timestamp
+  releaseType: release
