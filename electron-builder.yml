@@ -1,0 +1,26 @@
+appId: app.krudee.timestamp
+productName: KruDee Timestamp
+directories:
+  output: dist
+files:
+  - out/**/*
+  - resources/**/*
+extraResources:
+  - from: src/main/db/schema.sql
+    to: schema.sql
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Education
+  icon: resources/icon.png
+win:
+  target: nsis
+  icon: resources/icon.png
+mac:
+  target: dmg
+  category: public.app-category.education
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true

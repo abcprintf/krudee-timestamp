@@ -1,0 +1,6 @@
+<script setup lang="ts">
+import type { StudentView } from '../env'
+defineProps<{ student: StudentView; kind: 'entry' | 'exit' }>()
+</script>
+<template><section class="student-card card" aria-live="polite"><img class="photo" :src="`student-photo://${student.id}`" :alt="`รูปนักเรียน ${student.first_name}`" /><div><p class="eyebrow">{{ kind === 'entry' ? 'เข้าโรงเรียน' : 'กลับบ้าน' }}</p><h1>{{ student.prefix }}{{ student.first_name }} {{ student.last_name }}</h1><p class="nickname">{{ student.nickname ? `น้อง${student.nickname}` : `น้อง${student.first_name}` }}</p><p class="muted">{{ student.classroom_name || 'ไม่ระบุห้อง' }} <span v-if="student.class_number">เลขที่ {{ student.class_number }}</span></p></div></section></template>
+<style scoped>.student-card{display:grid;grid-template-columns:260px 1fr;align-items:center;gap:32px;padding:32px;width:min(920px,100%)}.photo{width:260px;height:260px;border-radius:28px;object-fit:cover;background:#dbeafe;border:4px solid #fff}.eyebrow{margin:0;color:#2563eb;font-weight:700;font-size:24px}h1{margin:8px 0;color:#0f172a;font-size:clamp(42px,5vw,72px);line-height:1.1}.nickname{margin:0 0 8px;color:#f97316;font-size:32px;font-weight:700}@media(max-width:760px){.student-card{grid-template-columns:1fr;text-align:center;justify-items:center}}</style>
