@@ -29,7 +29,7 @@ export function initUpdater(win: BrowserWindow): void {
     console.error('[updater] error:', err.stack ?? err.message)
   })
 
-  setTimeout(() => {
+  const timeoutId = setTimeout(() => {
     if (win.isDestroyed()) return
     autoUpdater.checkForUpdates().catch((e) => console.error('[updater] check failed:', e))
   }, 5_000)
@@ -40,6 +40,7 @@ export function initUpdater(win: BrowserWindow): void {
   }, 4 * 60 * 60 * 1_000)
 
   win.on('closed', () => {
+    clearTimeout(timeoutId)
     clearInterval(intervalId)
     autoUpdater.removeAllListeners()
   })
