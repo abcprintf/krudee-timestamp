@@ -6,10 +6,10 @@ const router = useRouter()
 const loading = ref(false)
 const error = ref('')
 const form = reactive({
-  base_url: 'http://localhost:3000',
+  base_url: 'https://krudee.workitdee.com',
   school_code: '',
   setup_token: '',
-  device_name: 'KruDee Kiosk',
+  device_name: 'อาคาร 1',
   role: 'both',
   admin_pin: '',
 })
