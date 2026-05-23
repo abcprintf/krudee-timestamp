@@ -33,8 +33,14 @@ export function initUpdater(win: BrowserWindow): void {
     if (win.isDestroyed()) return
     autoUpdater.checkForUpdates().catch((e) => console.error('[updater] check failed:', e))
   }, 5_000)
-  setInterval(() => {
+
+  const intervalId = setInterval(() => {
     if (win.isDestroyed()) return
     autoUpdater.checkForUpdates().catch((e) => console.error('[updater] check failed:', e))
   }, 4 * 60 * 60 * 1_000)
+
+  win.on('closed', () => {
+    clearInterval(intervalId)
+    autoUpdater.removeAllListeners()
+  })
 }
