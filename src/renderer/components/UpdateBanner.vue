@@ -37,7 +37,7 @@ onMounted(() => {
     state.value = 'available'
   })
   offProgress = window.krudee.updater.onDownloadProgress((progress) => {
-    downloadPercent.value = progress.percent
+    downloadPercent.value = Math.min(100, Math.max(0, progress.percent || 0))
   })
   offDownloaded = window.krudee.updater.onUpdateDownloaded((info) => {
     newVersion.value = info.version
@@ -53,7 +53,11 @@ onUnmounted(() => {
 
 async function install(): Promise<void> {
   installing.value = true
-  await window.krudee.updater.install()
+  try {
+    await window.krudee.updater.install()
+  } catch {
+    installing.value = false
+  }
 }
 </script>
 
