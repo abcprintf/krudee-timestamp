@@ -16,6 +16,7 @@
     "@electron-toolkit/utils": "^3.0.0",
     "auto-launch": "^5.0.6",
     "better-sqlite3": "^11.5.0",
+    "electron-updater": "^6.8.3",
     "node-cron": "^3.0.3",
     "ofetch": "^1.4.1",
     "usb": "^2.17.0",
