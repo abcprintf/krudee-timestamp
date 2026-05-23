@@ -19,6 +19,24 @@ const api = {
     clearUnknownUids: () => ipcRenderer.invoke('admin:clear-unknown-uids'),
     deleteUnknownUid: (uid: string) => ipcRenderer.invoke('admin:delete-unknown-uid', uid),
     updateSettings: (payload: Record<string, string>) => ipcRenderer.invoke('admin:settings:update', payload), history: () => ipcRenderer.invoke('admin:history'), resetDevice: () => ipcRenderer.invoke('admin:reset-device')
-  }
+  },
+  updater: {
+    onUpdateAvailable: (cb: (info: { version: string; releaseNotes: string | null }) => void) => {
+      const listener = (_: unknown, info: { version: string; releaseNotes: string | null }) => cb(info)
+      ipcRenderer.on('updater:update-available', listener)
+      return () => ipcRenderer.off('updater:update-available', listener)
+    },
+    onDownloadProgress: (cb: (progress: { percent: number }) => void) => {
+      const listener = (_: unknown, progress: { percent: number }) => cb(progress)
+      ipcRenderer.on('updater:download-progress', listener)
+      return () => ipcRenderer.off('updater:download-progress', listener)
+    },
+    onUpdateDownloaded: (cb: (info: { version: string }) => void) => {
+      const listener = (_: unknown, info: { version: string }) => cb(info)
+      ipcRenderer.on('updater:update-downloaded', listener)
+      return () => ipcRenderer.off('updater:update-downloaded', listener)
+    },
+    install: () => ipcRenderer.invoke('updater:install'),
+  },
 }
 contextBridge.exposeInMainWorld('krudee', api)
