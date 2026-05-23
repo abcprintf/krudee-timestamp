@@ -45,3 +45,7 @@ export function initUpdater(win: BrowserWindow): void {
     autoUpdater.removeAllListeners()
   })
 }
+
+export function triggerInstall(): void {
+  autoUpdater.quitAndInstall()
+}
