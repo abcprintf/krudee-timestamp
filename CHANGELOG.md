@@ -4,9 +4,12 @@
 
 ## [1.0.1] - 2026-05-23
 
+### Added
+- Linux build job (AppImage + deb) in release workflow
+
 ### Fixed
 - Grant `contents: write` permission in CI workflow so release assets can be uploaded
-- Add Linux build job to release workflow
+- Install `libudev-dev` on Linux runner before `npm ci` to fix `usb` native build
 
 ## [1.0.0] - 2026-05-23
 
