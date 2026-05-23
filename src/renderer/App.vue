@@ -1,4 +1,5 @@
 <template>
+  <UpdateBanner />
   <RouterView />
   <footer class="app-footer">
     <span>ระบบจัดการโรงเรียน</span>
@@ -8,6 +9,8 @@
 </template>
 
 <script setup lang="ts">
+import UpdateBanner from './components/UpdateBanner.vue'
+
 const version = import.meta.env.VITE_APP_VERSION ?? '0.1.0'
 </script>
 
