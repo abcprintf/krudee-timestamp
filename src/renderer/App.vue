@@ -3,8 +3,13 @@
   <footer class="app-footer">
     <span>ระบบจัดการโรงเรียน</span>
     <a href="https://krudee.workitdee.com/" target="_blank" rel="noopener">krudee.workitdee.com</a>
+    <span class="version">v{{ version }}</span>
   </footer>
 </template>
+
+<script setup lang="ts">
+const version = import.meta.env.VITE_APP_VERSION ?? '0.1.0'
+</script>
 
 <style scoped>
 .app-footer {
@@ -33,6 +38,10 @@
 }
 .app-footer a:hover {
   text-decoration: underline;
+}
+.version {
+  color: #cbd5e1;
+  font-size: 10px;
 }
 </style>
 
