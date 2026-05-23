@@ -20,12 +20,23 @@ type CardObject = { id: string; rfid_uid: string; label: string | null }
 function parseCards(raw: string | null): CardObject[] { try { return raw ? JSON.parse(raw) : [] } catch { return [] } }
 function toStudent(row: StudentRow): StudentRow & { rfid_uids_list: string[]; rfid_cards_list: CardObject[] } { return { ...row, rfid_uids_list: parseUids(row.rfid_uids), rfid_cards_list: parseCards(row.rfid_cards) } }
 function findStudentByUid(uid: string): StudentRow | null { const rows = getDb().prepare('SELECT * FROM students WHERE rfid_uids LIKE ?').all(`%${uid}%`) as StudentRow[]; return rows.find((row) => parseUids(row.rfid_uids).includes(uid)) ?? null }
-function localDayStartIso(now: Date): string { const start = new Date(now); start.setHours(0, 0, 0, 0); return start.toISOString() }
+
+const SCAN_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
+
+function findLastScanToday(studentId: string, scannedAt: Date): { kind: 'entry' | 'exit'; scanned_at: string } | null {
+  const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
+  return getDb().prepare(`SELECT kind, scanned_at FROM scan_events WHERE matched_student_id = ? AND scanned_at >= ? ORDER BY scanned_at DESC LIMIT 1`).get(studentId, dayStart.toISOString()) as { kind: 'entry' | 'exit'; scanned_at: string } | null
+}
+
 function determineKind(role: KioskRole, studentId: string | null, scannedAt: Date): 'entry' | 'exit' {
-  if (role === 'entry' || role === 'exit') return role
+  if (role === 'entry') return 'entry'
+  if (role === 'exit') return 'exit'
   if (!studentId) return 'entry'
-  const last = getDb().prepare(`SELECT kind FROM scan_events WHERE matched_student_id = ? AND scanned_at >= ? ORDER BY scanned_at DESC LIMIT 1`).get(studentId, localDayStartIso(scannedAt)) as { kind: 'entry' | 'exit' } | undefined
-  return last?.kind === 'entry' ? 'exit' : 'entry'
+  // ถ้ายังไม่มี entry วันนี้ → entry เสมอ (ไม่ว่ากี่โมง)
+  // ถ้ามี entry วันนี้แล้ว → exit ทั้งหมด
+  const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
+  const entryToday = getDb().prepare(`SELECT id FROM scan_events WHERE matched_student_id = ? AND kind = 'entry' AND scanned_at >= ? LIMIT 1`).get(studentId, dayStart.toISOString())
+  return entryToday ? 'exit' : 'entry'
 }
 function greeting(kind: 'entry' | 'exit', student: StudentRow): string { const name = student.nickname || student.first_name; return kind === 'entry' ? `สวัสดีน้อง${name}` : `เดินทางกลับบ้านปลอดภัยนะคะน้อง${name}` }
 
@@ -37,6 +48,8 @@ export function registerIpcHandlers(): void {
     setConfigValues({ base_url: payload.base_url || 'http://localhost:3000', school_code: payload.school_code, setup_token: payload.setup_token, device_name: payload.device_name, role: payload.role, admin_pin: payload.admin_pin, app_version: app.getVersion() })
     const result = await registerDevice({ school_code: payload.school_code, setup_token: payload.setup_token, device_name: payload.device_name, app_version: app.getVersion() })
     setConfigValues({ device_id: result.device_id, device_token: result.device_token, tts_enabled: 'true', auto_start: 'false' })
+    const school = result.school as { id?: string; code?: string; name?: string } | null
+    if (school) setConfigValues({ school_id: school.id ?? undefined, school_name: school.name ?? undefined })
     await syncRoster()
     return { ok: true, device_id: result.device_id, school: result.school }
   })
@@ -44,6 +57,19 @@ export function registerIpcHandlers(): void {
     const uid = payload.uid.trim()
     const scannedAt = payload.scanned_at ? new Date(payload.scanned_at) : new Date()
     const student = findStudentByUid(uid)
+
+    // Duplicate guard: อิง last scan จริงๆ วันนี้ ถ้าแตะภายใน cooldown → ไม่บันทึกใหม่
+    if (student) {
+      const last = findLastScanToday(student.id, scannedAt)
+      if (last) {
+        const msSinceLast = scannedAt.getTime() - new Date(last.scanned_at).getTime()
+        if (msSinceLast < SCAN_COOLDOWN_MS) {
+          // ยังอยู่ใน cooldown → duplicate, return kind เดิม
+          return { ok: true, duplicate: true, event: { client_event_id: '', rfid_uid: uid, scanned_at: scannedAt.toISOString(), kind: last.kind }, student: toStudent(student), queue_count: getUnsyncedCount() }
+        }
+      }
+    }
+
     const kind = determineKind(getConfig().role, student?.id ?? null, scannedAt)
     const clientEventId = randomUUID()
     getDb().prepare(`INSERT INTO scan_events (client_event_id, rfid_uid, scanned_at, kind, matched_student_id) VALUES (?, ?, ?, ?, ?)`).run(clientEventId, uid, scannedAt.toISOString(), kind, student?.id ?? null)
@@ -51,6 +77,10 @@ export function registerIpcHandlers(): void {
     return { ok: true, event: { client_event_id: clientEventId, rfid_uid: uid, scanned_at: scannedAt.toISOString(), kind }, student: student ? toStudent(student) : null, queue_count: getUnsyncedCount() }
   })
   ipcMain.handle('scan:queue-count', () => getUnsyncedCount())
+  ipcMain.handle('scan:history', () => {
+    const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
+    return getDb().prepare(`SELECT se.id, se.rfid_uid, se.scanned_at, se.kind, s.prefix, s.first_name, s.last_name, s.nickname, s.classroom_name, s.class_number, s.photo_url, s.photo_local_path FROM scan_events se LEFT JOIN students s ON s.id = se.matched_student_id WHERE se.scanned_at >= ? ORDER BY se.scanned_at DESC LIMIT 10`).all(dayStart.toISOString())
+  })
   ipcMain.handle('sync:now', () => syncNow())
   ipcMain.handle('roster:sync', () => syncRoster())
   ipcMain.handle('admin:verify-pin', (_event, pin: string) => pin === getConfig().admin_pin)
@@ -84,6 +114,11 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('admin:settings:update', async (_event, payload: Partial<Record<string, string>>) => { setConfigValues(payload); if (typeof payload.auto_start === 'string') await setAutoLaunch(payload.auto_start === 'true'); return getConfig() })
   ipcMain.handle('admin:history', () => getDb().prepare(`SELECT scan_events.*, students.first_name, students.last_name, students.nickname, students.classroom_name FROM scan_events LEFT JOIN students ON students.id = scan_events.matched_student_id ORDER BY scan_events.scanned_at DESC LIMIT 100`).all())
   ipcMain.handle('admin:reset-device', () => { clearDeviceConfig(); getDb().prepare('DELETE FROM students').run(); getDb().prepare('DELETE FROM scan_events').run(); setConfigValue('base_url', 'http://localhost:3000'); return { ok: true } })
+  ipcMain.handle('dev:clear-scans', () => {
+    if (app.isPackaged) return { ok: false, error: 'not allowed in production' }
+    getDb().prepare('DELETE FROM scan_events').run()
+    return { ok: true }
+  })
   ipcMain.handle('updater:install', () => {
     if (process.platform === 'linux' && !process.execPath.endsWith('.AppImage')) {
       shell.openExternal('https://github.com/abcprintf/krudee-timestamp/releases/latest')

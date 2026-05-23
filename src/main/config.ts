@@ -4,18 +4,21 @@ export type KioskRole = 'entry' | 'exit' | 'both'
 export interface AppConfig {
   base_url: string
   school_code?: string
+  school_id?: string
+  school_name?: string
   setup_token?: string
   device_name?: string
   device_id?: string
   device_token?: string
   admin_pin?: string
   role: KioskRole
+  exit_after_hour: string  // "14" = 14:00, ถ้าแตะหลังเวลานี้ถือว่า exit
   tts_enabled: string
   auto_start: string
   app_version?: string
 }
 
-const DEFAULTS: AppConfig = { base_url: 'http://localhost:3000', role: 'both', tts_enabled: 'true', auto_start: 'false' }
+const DEFAULTS: AppConfig = { base_url: 'http://localhost:3000', role: 'both', exit_after_hour: '14', tts_enabled: 'true', auto_start: 'false' }
 
 export function getConfigValue(key: string): string | undefined {
   return (getDb().prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined)?.value
