@@ -1,6 +1,6 @@
 {
   "name": "krudee-timestamp",
-  "version": "1.0.1",
+  "version": "1.0.2",
   "description": "RFID time-stamp kiosk for KruDee schools",
   "author": {
     "name": "abcprintf",
