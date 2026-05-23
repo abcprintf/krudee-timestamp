@@ -1,6 +1,6 @@
 {
   "name": "krudee-timestamp",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "description": "RFID time-stamp kiosk for KruDee schools",
   "main": "out/main/index.js",
   "scripts": {
