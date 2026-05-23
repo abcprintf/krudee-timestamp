@@ -18,7 +18,8 @@ export interface AppConfig {
   app_version?: string
 }
 
-const DEFAULTS: AppConfig = { base_url: 'http://localhost:3000', role: 'both', exit_after_hour: '14', tts_enabled: 'true', auto_start: 'false' }
+const IS_DEV = process.env.NODE_ENV === 'development'
+const DEFAULTS: AppConfig = { base_url: IS_DEV ? 'http://localhost:3000' : 'https://krudee.workitdee.com', role: 'both', exit_after_hour: '14', tts_enabled: 'true', auto_start: 'false' }
 
 export function getConfigValue(key: string): string | undefined {
   return (getDb().prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined)?.value

@@ -4,7 +4,8 @@
   "description": "RFID time-stamp kiosk for KruDee schools",
   "main": "out/main/index.js",
   "scripts": {
-    "dev": "electron-vite dev",
+    "patch-electron-name": "node scripts/patch-electron.js",
+    "dev": "npm run patch-electron-name 2>/dev/null || true && electron-vite dev",
     "build": "electron-vite build",
     "build:win": "electron-vite build && electron-builder --win",
     "build:linux": "electron-vite build && electron-builder --linux",

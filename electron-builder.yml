@@ -16,10 +16,11 @@ linux:
   icon: resources/icon.png
 win:
   target: nsis
-  icon: resources/icon.png
+  icon: resources/icon.ico
 mac:
   target: dmg
   category: public.app-category.education
+  icon: resources/icon.icns
 nsis:
   oneClick: false
   perMachine: false
