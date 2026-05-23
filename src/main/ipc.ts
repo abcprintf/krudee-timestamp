@@ -8,6 +8,7 @@ import { getUnsyncedCount } from './sync/attendance'
 import { syncNow } from './sync/scheduler'
 import { syncRoster } from './sync/roster'
 import { speak } from './tts'
+import { initRfidDeviceMonitor, getRfidDeviceStatus } from './rfid-device'
 
 interface SetupPayload { base_url: string; school_code: string; setup_token: string; device_name?: string; role: KioskRole; admin_pin: string }
 interface ScanPayload { uid: string; scanned_at?: string }
@@ -28,6 +29,8 @@ function determineKind(role: KioskRole, studentId: string | null, scannedAt: Dat
 function greeting(kind: 'entry' | 'exit', student: StudentRow): string { const name = student.nickname || student.first_name; return kind === 'entry' ? `สวัสดีน้อง${name}` : `เดินทางกลับบ้านปลอดภัยนะคะน้อง${name}` }
 
 export function registerIpcHandlers(): void {
+  initRfidDeviceMonitor()
+  ipcMain.handle('device:rfid-status', () => getRfidDeviceStatus())
   ipcMain.handle('config:get', () => ({ ...getConfig(), configured: isConfigured() }))
   ipcMain.handle('setup:register', async (_event, payload: SetupPayload) => {
     setConfigValues({ base_url: payload.base_url || 'http://localhost:3000', school_code: payload.school_code, setup_token: payload.setup_token, device_name: payload.device_name, role: payload.role, admin_pin: payload.admin_pin, app_version: app.getVersion() })

@@ -5,6 +5,14 @@ const api = {
   setup: { register: (payload: unknown) => ipcRenderer.invoke('setup:register', payload) },
   scan: { record: (payload: { uid: string; scanned_at?: string }) => ipcRenderer.invoke('scan:record', payload), queueCount: () => ipcRenderer.invoke('scan:queue-count') },
   sync: { now: () => ipcRenderer.invoke('sync:now'), roster: () => ipcRenderer.invoke('roster:sync') },
+  device: {
+    rfidStatus: () => ipcRenderer.invoke('device:rfid-status'),
+    onRfidStatusChange: (cb: (status: { connected: boolean; count: number }) => void) => {
+      const listener = (_: unknown, status: { connected: boolean; count: number }) => cb(status)
+      ipcRenderer.on('rfid-device-changed', listener)
+      return () => ipcRenderer.off('rfid-device-changed', listener)
+    },
+  },
   admin: {
     verifyPin: (pin: string) => ipcRenderer.invoke('admin:verify-pin', pin), students: (query?: string) => ipcRenderer.invoke('admin:students', query), unknownUids: () => ipcRenderer.invoke('admin:unknown-uids'),
     bindCard: (payload: { student_id: string; rfid_uid: string; label?: string }) => ipcRenderer.invoke('admin:bind-card', payload), unbindCard: (payload: { card_id: string }) => ipcRenderer.invoke('admin:unbind-card', payload),
