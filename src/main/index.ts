@@ -1,4 +1,4 @@
-import { app, BrowserWindow, protocol } from 'electron'
+import { app, BrowserWindow, protocol, screen } from 'electron'
 import { join } from 'node:path'
 import { closeDb, getDb } from './db/client'
 import { registerIpcHandlers } from './ipc'
@@ -11,7 +11,12 @@ protocol.registerSchemesAsPrivileged([{ scheme: 'student-photo', privileges: { s
 let mainWindow: BrowserWindow | null = null
 
 function createWindow(): void {
-  mainWindow = new BrowserWindow({ width: 1280, height: 800, minWidth: 1024, minHeight: 640, fullscreen: true, autoHideMenuBar: true, backgroundColor: '#f8fafc', webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true, nodeIntegration: false } })
+  const primary = screen.getPrimaryDisplay()
+  const { x, y, width, height } = primary.bounds
+  mainWindow = new BrowserWindow({ x, y, width, height, minWidth: 1024, minHeight: 640, autoHideMenuBar: true, backgroundColor: '#f8fafc', webPreferences: { preload: join(__dirname, '../preload/index.js'), sandbox: false, contextIsolation: true, nodeIntegration: false } })
+  // ต้อง setBounds ก่อน setFullScreen — fullscreen: true ใน constructor จะ ignore x,y
+  mainWindow.setBounds(primary.bounds)
+  mainWindow.setFullScreen(true)
   mainWindow.on('closed', () => { mainWindow = null })
   if (process.env.ELECTRON_RENDERER_URL) void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))

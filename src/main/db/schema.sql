@@ -14,6 +14,7 @@ CREATE TABLE IF NOT EXISTS students (
   classroom_name TEXT,
   class_number INTEGER,
   rfid_uids TEXT,
+  rfid_cards TEXT,
   updated_at TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_students_uids ON students(rfid_uids);

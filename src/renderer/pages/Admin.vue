@@ -1,17 +1,330 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useRouter } from 'vue-router'
-import type { AppConfigView, HistoryRow, StudentView, UnknownUidRow } from '../env'
-const router = useRouter(); const unlocked = ref(false); const pin = ref(''); const error = ref(''); const tab = ref<'students'|'cards'|'settings'|'history'>('students'); const query = ref(''); const students = ref<StudentView[]>([]); const unknownUids = ref<UnknownUidRow[]>([]); const history = ref<HistoryRow[]>([]); const config = ref<AppConfigView | null>(null); const selectedUid = ref(''); const selectedStudentId = ref(''); const loading = ref(false); const resetArmed = ref(false)
-const selectedStudent = computed(() => students.value.find((student) => student.id === selectedStudentId.value))
-async function unlock(): Promise<void> { error.value = ''; unlocked.value = await window.krudee.admin.verifyPin(pin.value); if (!unlocked.value) { error.value = 'PIN ไม่ถูกต้อง'; return } await loadAll() }
-async function loadAll(): Promise<void> { config.value = await window.krudee.config.get(); students.value = await window.krudee.admin.students(query.value); unknownUids.value = await window.krudee.admin.unknownUids(); history.value = await window.krudee.admin.history() }
+import type { AppConfigView, HistoryRow, RfidCard, StudentView, UnknownUidRow } from '../env'
+
+const router = useRouter()
+const unlocked = ref(false)
+const pin = ref('')
+const error = ref('')
+const tab = ref<'students' | 'cards' | 'settings' | 'history'>('students')
+const query = ref('')
+const students = ref<StudentView[]>([])
+const unknownUids = ref<UnknownUidRow[]>([])
+const history = ref<HistoryRow[]>([])
+const config = ref<AppConfigView | null>(null)
+const loading = ref(false)
+const resetArmed = ref(false)
+
+// --- card binding step state ---
+type BindStep = 'uid' | 'student' | 'confirm'
+const bindStep = ref<BindStep>('uid')
+const selectedUid = ref('')
+const selectedStudentId = ref('')
+const bindSuccess = ref(false)
+const bindError = ref('')
+const selectedStudent = computed(() => students.value.find(s => s.id === selectedStudentId.value))
+
+function selectUid(uid: string): void {
+  selectedUid.value = uid
+  selectedStudentId.value = ''
+  query.value = ''
+  bindStep.value = 'student'
+}
+
+function selectStudent(id: string): void {
+  selectedStudentId.value = id
+  bindStep.value = 'confirm'
+}
+
+function cancelBind(): void {
+  selectedUid.value = ''
+  selectedStudentId.value = ''
+  query.value = ''
+  bindStep.value = 'uid'
+  bindSuccess.value = false
+  bindError.value = ''
+}
+
+async function confirmBind(): Promise<void> {
+  if (!selectedUid.value || !selectedStudentId.value) return
+  if ((selectedStudent.value?.rfid_uids_list.length ?? 0) > 0) return
+  bindError.value = ''
+  loading.value = true
+  try {
+    await window.krudee.admin.bindCard({ student_id: selectedStudentId.value, rfid_uid: selectedUid.value })
+    bindSuccess.value = true
+    await loadAll()
+    setTimeout(() => { cancelBind() }, 2000)
+  } catch (err) {
+    bindError.value = err instanceof Error ? err.message : 'ผูกบัตรไม่สำเร็จ'
+  } finally {
+    loading.value = false
+  }
+}
+
+async function unlock(): Promise<void> {
+  error.value = ''
+  unlocked.value = await window.krudee.admin.verifyPin(pin.value)
+  if (!unlocked.value) { error.value = 'PIN ไม่ถูกต้อง'; return }
+  await loadAll()
+}
+
+async function loadAll(): Promise<void> {
+  config.value = await window.krudee.config.get()
+  students.value = await window.krudee.admin.students(query.value)
+  unknownUids.value = await window.krudee.admin.unknownUids()
+  history.value = await window.krudee.admin.history()
+}
+
 async function searchStudents(): Promise<void> { students.value = await window.krudee.admin.students(query.value) }
-async function bindCard(): Promise<void> { if (!selectedUid.value || !selectedStudentId.value) return; loading.value = true; try { await window.krudee.admin.bindCard({ student_id: selectedStudentId.value, rfid_uid: selectedUid.value }); selectedUid.value = ''; selectedStudentId.value = ''; await loadAll() } finally { loading.value = false } }
-async function saveSettings(): Promise<void> { if (!config.value) return; loading.value = true; try { config.value = await window.krudee.admin.updateSettings({ base_url: config.value.base_url, device_name: config.value.device_name ?? '', role: config.value.role, tts_enabled: config.value.tts_enabled, auto_start: config.value.auto_start }) } finally { loading.value = false } }
-async function manualSync(): Promise<void> { loading.value = true; try { await window.krudee.sync.now(); await window.krudee.sync.roster(); await loadAll() } finally { loading.value = false } }
-async function resetDevice(): Promise<void> { if (!resetArmed.value) { resetArmed.value = true; return } await window.krudee.admin.resetDevice(); await router.push('/setup') }
-onMounted(async () => { config.value = await window.krudee.config.get() })
+
+async function saveSettings(): Promise<void> {
+  if (!config.value) return
+  loading.value = true
+  try { config.value = await window.krudee.admin.updateSettings({ base_url: config.value.base_url, device_name: config.value.device_name ?? '', role: config.value.role, tts_enabled: config.value.tts_enabled, auto_start: config.value.auto_start }) }
+  finally { loading.value = false }
+}
+
+async function manualSync(): Promise<void> {
+  loading.value = true
+  try { await window.krudee.sync.now(); await window.krudee.sync.roster(); await loadAll() }
+  finally { loading.value = false }
+}
+
+async function resetDevice(): Promise<void> {
+  if (!resetArmed.value) { resetArmed.value = true; return }
+  await window.krudee.admin.resetDevice()
+  await router.push('/setup')
+}
+
+async function clearUnknownUids(): Promise<void> {
+  loading.value = true
+  try { await window.krudee.admin.clearUnknownUids(); await refreshCards() }
+  finally { loading.value = false }
+}
+
+async function deleteUnknownUid(uid: string): Promise<void> {
+  // optimistic: ลบออกทันทีก่อน IPC
+  unknownUids.value = unknownUids.value.filter(u => u.rfid_uid !== uid)
+  try {
+    await window.krudee.admin.deleteUnknownUid(uid)
+  } catch (err) {
+    manageError.value = err instanceof Error ? err.message : 'ลบไม่สำเร็จ'
+    // rollback
+    await refreshCards()
+  }
+}
+
+async function refreshCards(): Promise<void> { unknownUids.value = await window.krudee.admin.unknownUids() }
+
+// --- student card management ---
+const managingStudent = ref<StudentView | null>(null)
+const unbindLoading = ref('')
+const manageError = ref('')
+
+function openManage(student: StudentView): void {
+  managingStudent.value = student
+  manageError.value = ''
+  void refreshCards()
+}
+function closeManage(): void { managingStudent.value = null; manageError.value = '' }
+
+async function bindNewCardToStudent(student: StudentView, uid: string): Promise<void> {
+  if (student.rfid_uids_list.length > 0) { manageError.value = 'นักเรียนคนนี้มีบัตรแล้ว ต้องยกเลิกบัตรเก่าก่อน'; return }
+  manageError.value = ''
+  loading.value = true
+  try {
+    await window.krudee.admin.bindCard({ student_id: student.id, rfid_uid: uid })
+    await loadAll()
+    await refreshCards()
+    managingStudent.value = students.value.find(s => s.id === student.id) ?? null
+  } catch (err) {
+    manageError.value = err instanceof Error ? err.message : 'ผูกบัตรไม่สำเร็จ'
+  } finally { loading.value = false }
+}
+
+async function unbindCard(card: RfidCard): Promise<void> {
+  manageError.value = ''
+  unbindLoading.value = card.id
+  try {
+    await window.krudee.admin.unbindCard({ card_id: card.id })
+    await loadAll()
+    managingStudent.value = students.value.find(s => s.id === managingStudent.value?.id) ?? null
+  } catch (err) {
+    manageError.value = err instanceof Error ? err.message : 'ยกเลิกบัตรไม่สำเร็จ'
+  } finally { unbindLoading.value = '' }
+}
+
+const lastScannedUid = ref('')
+let wedgeBuffer = ''
+let wedgeTimer: ReturnType<typeof setTimeout> | null = null
+function onAdminKeydown(event: KeyboardEvent): void {
+  if (event.key === 'Enter') {
+    const uid = wedgeBuffer.trim()
+    wedgeBuffer = ''
+    if (uid.length >= 4) {
+      // ป้องกัน Enter trigger ปุ่มที่ focused ใน modal
+      event.preventDefault()
+      event.stopPropagation()
+      lastScannedUid.value = uid
+      // ไม่บันทึกเวลาเข้า-ออก — เพิ่ม UID เข้า unknownUids โดยตรงเพื่อแสดงในหน้า Admin
+      if (!unknownUids.value.some(u => u.rfid_uid === uid)) {
+        unknownUids.value = [{ rfid_uid: uid, count: 1, last_scanned_at: new Date().toISOString() }, ...unknownUids.value]
+      }
+      if (managingStudent.value) {
+        const id = managingStudent.value.id
+        void searchStudents().then(() => {
+          managingStudent.value = students.value.find(s => s.id === id) ?? managingStudent.value
+        })
+      }
+    }
+    return
+  }
+  if (/^[a-zA-Z0-9\-]$/.test(event.key)) {
+    wedgeBuffer += event.key
+    if (wedgeTimer) clearTimeout(wedgeTimer)
+    wedgeTimer = setTimeout(() => { wedgeBuffer = '' }, 1000)
+  }
+}
+
+onMounted(async () => { config.value = await window.krudee.config.get(); window.addEventListener('keydown', onAdminKeydown) })
+onBeforeUnmount(() => { window.removeEventListener('keydown', onAdminKeydown) })
 </script>
-<template><main class="page admin-page"><section v-if="!unlocked" class="card pin-card grid"><h1>โหมดผู้ดูแล</h1><label>กรอก PIN <input v-model="pin" class="input" type="password" inputmode="numeric" @keyup.enter="unlock" /></label><p v-if="error" class="error">{{ error }}</p><div class="row"><button class="btn-secondary" @click="router.push('/kiosk')">กลับหน้าสแกน</button><button class="btn-primary" @click="unlock">เข้าสู่ระบบ</button></div></section><section v-else class="admin-shell"><header class="admin-header"><div><h1>ผู้ดูแลเครื่อง</h1><p class="muted">จัดการนักเรียน บัตร และการซิงก์</p></div><button class="btn-secondary" @click="router.push('/kiosk')">กลับหน้าสแกน</button></header><nav class="tabs" aria-label="เมนูผู้ดูแล"><button :class="{active:tab==='students'}" @click="tab='students'">นักเรียน</button><button :class="{active:tab==='cards'}" @click="tab='cards'">บัตรยังไม่ผูก</button><button :class="{active:tab==='settings'}" @click="tab='settings'">ตั้งค่า</button><button :class="{active:tab==='history'}" @click="tab='history'">ประวัติ</button></nav><section v-if="tab==='students'" class="card panel grid"><div class="row"><input v-model="query" class="input" placeholder="ค้นหาชื่อ ห้อง หรือรหัสนักเรียน" @keyup.enter="searchStudents" /><button class="btn-primary" @click="searchStudents">ค้นหา</button></div><div class="list"><article v-for="student in students" :key="student.id" class="list-item"><strong>{{ student.first_name }} {{ student.last_name }}</strong><span>{{ student.classroom_name || '-' }} เลขที่ {{ student.class_number || '-' }}</span><small>บัตร: {{ student.rfid_uids_list.join(', ') || 'ยังไม่มี' }}</small></article></div></section><section v-if="tab==='cards'" class="card panel grid"><div class="split"><div><h2>UID ที่ยังไม่ผูก</h2><button v-for="uid in unknownUids" :key="uid.rfid_uid" class="uid-row" :class="{active:selectedUid===uid.rfid_uid}" @click="selectedUid=uid.rfid_uid"><strong>{{ uid.rfid_uid }}</strong><span>{{ uid.count }} ครั้ง</span><small>{{ new Date(uid.last_scanned_at).toLocaleString('th-TH') }}</small></button></div><div class="grid"><h2>เลือกนักเรียน</h2><input v-model="query" class="input" placeholder="ค้นหานักเรียน" @input="searchStudents" /><select v-model="selectedStudentId" size="12"><option v-for="student in students" :key="student.id" :value="student.id">{{ student.first_name }} {{ student.last_name }} — {{ student.classroom_name || '-' }}</option></select><p v-if="selectedStudent">จะผูกบัตร {{ selectedUid }} ให้ {{ selectedStudent.first_name }}</p><button class="btn-primary" :disabled="!selectedUid||!selectedStudentId||loading" @click="bindCard">ผูกบัตร</button></div></div></section><section v-if="tab==='settings' && config" class="card panel grid"><label>URL เซิร์ฟเวอร์ <input v-model="config.base_url" class="input" /></label><label>ชื่อเครื่อง <input v-model="config.device_name" class="input" /></label><label>โหมด <select v-model="config.role"><option value="both">เข้าและออก</option><option value="entry">เข้าอย่างเดียว</option><option value="exit">ออกอย่างเดียว</option></select></label><label class="check"><input v-model="config.tts_enabled" true-value="true" false-value="false" type="checkbox" /> เปิดเสียงทักทาย</label><label class="check"><input v-model="config.auto_start" true-value="true" false-value="false" type="checkbox" /> เปิดโปรแกรมพร้อมเครื่อง</label><div class="row"><button class="btn-primary" :disabled="loading" @click="saveSettings">บันทึก</button><button class="btn-secondary" :disabled="loading" @click="manualSync">ซิงก์ตอนนี้</button><button class="btn-danger" @click="resetDevice">{{ resetArmed ? 'กดอีกครั้งเพื่อยืนยันรีเซ็ต' : 'รีเซ็ตเครื่อง' }}</button></div></section><section v-if="tab==='history'" class="card panel grid"><article v-for="item in history" :key="item.id" class="list-item"><strong>{{ item.nickname || item.first_name || 'ไม่ทราบชื่อ' }} — {{ item.kind === 'entry' ? 'เข้า' : 'ออก' }}</strong><span>{{ item.rfid_uid }} · {{ new Date(item.scanned_at).toLocaleString('th-TH') }}</span><small>{{ item.synced ? 'ซิงก์แล้ว' : 'รอซิงก์' }} {{ item.sync_error ? `· ${item.sync_error}` : '' }}</small></article></section></section></main></template>
-<style scoped>.admin-page{overflow:auto}.pin-card{width:min(440px,100%);margin:10vh auto 0;padding:28px}.admin-shell{max-width:1180px;margin:0 auto;display:grid;gap:18px}.admin-header{display:flex;justify-content:space-between;align-items:center;gap:16px}h1{margin:0;color:#0f172a;font-size:38px}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{min-height:48px;border:0;border-radius:14px;padding:8px 16px;background:#e2e8f0;color:#334155;font-weight:700}.tabs button.active{background:#2563eb;color:#fff}.panel{padding:24px}.list{display:grid;gap:10px;max-height:58vh;overflow:auto}.list-item{display:grid;gap:2px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0}.split{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}.uid-row{width:100%;display:grid;gap:2px;margin-bottom:8px;padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:left}.uid-row.active{border-color:#2563eb;background:#eff6ff}.check{display:flex;align-items:center;gap:10px;font-weight:700}.check input{width:22px;height:22px}</style>
+<template><main class="page admin-page"><section v-if="!unlocked" class="card pin-card grid"><h1>โหมดผู้ดูแล</h1><label>กรอก PIN <input v-model="pin" class="input" type="password" inputmode="numeric" @keyup.enter="unlock" /></label><p v-if="error" class="error">{{ error }}</p><div class="row"><button class="btn-secondary" @click="router.push('/kiosk')">กลับหน้าสแกน</button><button class="btn-primary" @click="unlock">เข้าสู่ระบบ</button></div></section><section v-else class="admin-shell"><header class="admin-header"><div><h1>ผู้ดูแลเครื่อง</h1><p class="muted">จัดการนักเรียน บัตร และการซิงก์</p></div><button class="btn-secondary" @click="router.push('/kiosk')">กลับหน้าสแกน</button></header><nav class="tabs" aria-label="เมนูผู้ดูแล"><button :class="{active:tab==='students'}" @click="tab='students'">นักเรียน</button><button :class="{active:tab==='cards'}" @click="tab='cards'; refreshCards()">บัตรยังไม่ผูก</button><button :class="{active:tab==='settings'}" @click="tab='settings'">ตั้งค่า</button><button :class="{active:tab==='history'}" @click="tab='history'">ประวัติ</button></nav><section v-if="tab==='students'" class="card panel grid">
+        <div class="row"><input v-model="query" class="input" placeholder="ค้นหาชื่อ ห้อง หรือรหัสนักเรียน" @keyup.enter="searchStudents" /><button class="btn-primary" @click="searchStudents">ค้นหา</button></div>
+        <div class="list">
+          <article v-for="student in students" :key="student.id" class="list-item list-item--clickable" @click="openManage(student)">
+            <div class="student-row">
+              <div>
+                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                <span class="muted" style="font-size:13px"> · {{ student.classroom_name || '-' }} เลขที่ {{ student.class_number || '-' }}</span>
+              </div>
+              <div class="card-badges">
+                <span v-if="student.rfid_uids_list.length === 0" class="badge badge--none">ไม่มีบัตร</span>
+                <span v-for="uid in student.rfid_uids_list" :key="uid" class="badge badge--has">🪪 {{ uid }}</span>
+              </div>
+            </div>
+          </article>
+        </div>
+
+        <!-- Modal จัดการบัตรของนักเรียน -->
+        <div v-if="managingStudent" class="modal-overlay" @click.self="closeManage">
+          <div class="modal-box grid">
+            <div class="row" style="justify-content:space-between">
+              <div>
+                <h2 style="margin:0">{{ managingStudent.first_name }} {{ managingStudent.last_name }}</h2>
+                <p class="muted" style="margin:4px 0 0">{{ managingStudent.classroom_name || '-' }}</p>
+              </div>
+              <button class="btn-secondary" style="align-self:start" @click="closeManage">✕</button>
+            </div>
+
+            <div>
+              <p style="font-weight:700;margin:0 0 8px">บัตร RFID ที่ผูกแล้ว</p>
+              <p v-if="managingStudent.rfid_cards_list.length === 0" class="muted">ยังไม่มีบัตร</p>
+              <div class="grid" style="gap:8px">
+                <div v-for="card in managingStudent.rfid_cards_list" :key="card.id" class="card-item">
+                  <span class="mono">{{ card.rfid_uid }}</span>
+                  <span v-if="card.label" class="muted" style="font-size:12px">{{ card.label }}</span>
+                  <button class="btn-danger" style="padding:6px 12px;min-height:36px;font-size:13px" :disabled="unbindLoading === card.id" @click="unbindCard(card)">
+                    {{ unbindLoading === card.id ? '...' : 'ยกเลิก' }}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- scan indicator -->
+            <div class="scan-hint">
+              <span v-if="lastScannedUid">🪪 ตรวจพบบัตร: <strong class="mono">{{ lastScannedUid }}</strong></span>
+              <span v-else class="muted">แตะบัตร RFID ที่เครื่องเพื่อผูกบัตร</span>
+            </div>
+
+            <div v-if="unknownUids.length > 0">
+              <p style="font-weight:700;margin:0 0 8px">ผูกบัตรใหม่ (บัตรที่ยังไม่ผูก)</p>
+              <div class="grid" style="gap:8px">
+                <div v-for="uid in unknownUids" :key="uid.rfid_uid" class="card-item card-item--new">
+                  <span class="mono">{{ uid.rfid_uid }}</span>
+                  <span class="muted" style="font-size:12px">แตะ {{ uid.count }} ครั้ง</span>
+                  <button class="btn-primary" style="padding:6px 12px;min-height:36px;font-size:13px" :disabled="loading" @click="bindNewCardToStudent(managingStudent!, uid.rfid_uid)">
+                    {{ loading ? '...' : 'ผูกบัตรนี้' }}
+                  </button>
+                  <button class="btn-secondary" style="padding:6px 10px;min-height:36px;font-size:13px" title="ลบออกจากรายการ" @click="deleteUnknownUid(uid.rfid_uid)">✕</button>
+                </div>
+              </div>
+            </div>
+            <p v-if="manageError" class="error" role="alert">{{ manageError }}</p>
+            <p v-else-if="unknownUids.length === 0" class="muted" style="font-size:13px">ให้นักเรียนแตะบัตรที่เครื่องก่อน เพื่อผูกบัตรใหม่</p>
+          </div>
+        </div>
+      </section><section v-if="tab==='cards'" class="card panel grid">
+        <!-- Step indicator -->
+        <div class="bind-steps">
+          <span :class="['step', bindStep==='uid' ? 'active' : (selectedUid ? 'done' : '')]">1 เลือกบัตร</span>
+          <span class="step-sep">›</span>
+          <span :class="['step', bindStep==='student' ? 'active' : (selectedStudentId ? 'done' : '')]">2 เลือกนักเรียน</span>
+          <span class="step-sep">›</span>
+          <span :class="['step', bindStep==='confirm' ? 'active' : '']">3 ยืนยัน</span>
+        </div>
+
+        <!-- Step 1: เลือก UID -->
+        <div v-if="bindStep==='uid'">
+          <div class="row" style="margin-bottom:8px">
+            <p v-if="unknownUids.length === 0" class="muted" style="flex:1">ไม่มีบัตรที่รอผูก — ให้นักเรียนแตะบัตรที่เครื่องก่อน</p>
+            <span v-else class="muted" style="flex:1">{{ unknownUids.length }} บัตรรอผูก</span>
+            <button class="btn-secondary" style="min-width:80px" @click="refreshCards">🔄 รีเฟรช</button>
+          </div>
+          <div class="list">
+            <div v-for="uid in unknownUids" :key="uid.rfid_uid" class="uid-row-wrap">
+              <button class="uid-row" @click="selectUid(uid.rfid_uid)">
+                <strong>{{ uid.rfid_uid }}</strong>
+                <span>แตะ {{ uid.count }} ครั้ง · ล่าสุด {{ new Date(uid.last_scanned_at).toLocaleString('th-TH') }}</span>
+              </button>
+              <button class="btn-secondary" style="padding:6px 10px;min-height:36px;font-size:13px;flex-shrink:0" title="ลบออกจากรายการ" @click="deleteUnknownUid(uid.rfid_uid)">✕</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Step 2: เลือกนักเรียน -->
+        <div v-else-if="bindStep==='student'" class="grid">
+          <div class="bind-uid-badge">บัตร: <strong>{{ selectedUid }}</strong></div>
+          <div class="row">
+            <input v-model="query" class="input" placeholder="ค้นหาชื่อ ห้อง หรือรหัสนักเรียน" @input="searchStudents" autofocus />
+            <button class="btn-secondary" @click="cancelBind">ยกเลิก</button>
+          </div>
+          <div class="list">
+            <button
+              v-for="student in students" :key="student.id"
+              class="uid-row"
+              :class="{ 'uid-row--disabled': student.rfid_uids_list.length > 0 }"
+              :disabled="student.rfid_uids_list.length > 0"
+              @click="student.rfid_uids_list.length === 0 && selectStudent(student.id)"
+            >
+              <div class="row" style="justify-content:space-between;align-items:center">
+                <strong>{{ student.first_name }} {{ student.last_name }}</strong>
+                <span v-if="student.rfid_uids_list.length > 0" class="badge badge--has" style="font-size:11px">มีบัตรแล้ว</span>
+              </div>
+              <span>{{ student.classroom_name || '-' }} · เลขที่ {{ student.class_number || '-' }}</span>
+              <small v-if="student.rfid_uids_list.length > 0" style="color:#94a3b8">{{ student.rfid_uids_list.join(', ') }}</small>
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: ยืนยัน -->
+        <div v-else-if="bindStep==='confirm'" class="grid">
+          <div v-if="bindSuccess" class="success" style="font-size:18px;text-align:center;padding:24px">✅ ผูกบัตรสำเร็จ!</div>
+          <template v-else>
+            <div class="confirm-box">
+              <p class="muted">ยืนยันการผูกบัตร</p>
+              <div class="confirm-row"><span>บัตร RFID</span><strong class="mono">{{ selectedUid }}</strong></div>
+              <div class="confirm-row"><span>นักเรียน</span><strong>{{ selectedStudent?.first_name }} {{ selectedStudent?.last_name }}</strong></div>
+              <div class="confirm-row"><span>ห้อง</span><strong>{{ selectedStudent?.classroom_name || '-' }}</strong></div>
+            </div>
+            <p v-if="bindError" class="error" role="alert">{{ bindError }}</p>
+            <div class="row">
+              <button class="btn-secondary" :disabled="loading" @click="cancelBind">ยกเลิก</button>
+              <button class="btn-primary" :disabled="loading" @click="confirmBind">{{ loading ? 'กำลังผูก...' : 'ยืนยันผูกบัตร' }}</button>
+            </div>
+          </template>
+        </div>
+      </section><section v-if="tab==='settings' && config" class="card panel grid"><div class="info-box"><p class="info-row"><span class="info-label">Server URL</span><span class="info-value">{{ config.base_url }}</span></p><p class="info-row"><span class="info-label">Device ID</span><span class="info-value mono">{{ config.device_id || '-' }}</span></p><p class="info-row"><span class="info-label">รหัสโรงเรียน</span><span class="info-value mono">{{ config.school_code || '-' }}</span></p></div><label>URL เซิร์ฟเวอร์ <input v-model="config.base_url" class="input" /></label><label>ชื่อเครื่อง <input v-model="config.device_name" class="input" /></label><label>โหมด <select v-model="config.role"><option value="both">เข้าและออก</option><option value="entry">เข้าอย่างเดียว</option><option value="exit">ออกอย่างเดียว</option></select></label><label class="check"><input v-model="config.tts_enabled" true-value="true" false-value="false" type="checkbox" /> เปิดเสียงทักทาย</label><label class="check"><input v-model="config.auto_start" true-value="true" false-value="false" type="checkbox" /> เปิดโปรแกรมพร้อมเครื่อง</label><div class="row"><button class="btn-primary" :disabled="loading" @click="saveSettings">บันทึก</button><button class="btn-secondary" :disabled="loading" @click="manualSync">ซิงก์ตอนนี้</button><button class="btn-secondary" :disabled="loading" @click="clearUnknownUids">ล้างบัตรยังไม่ผูก</button><button class="btn-danger" @click="resetDevice">{{ resetArmed ? 'กดอีกครั้งเพื่อยืนยันรีเซ็ต' : 'รีเซ็ตเครื่อง' }}</button></div></section><section v-if="tab==='history'" class="card panel grid"><article v-for="item in history" :key="item.id" class="list-item"><strong>{{ item.nickname || item.first_name || 'ไม่ทราบชื่อ' }} — {{ item.kind === 'entry' ? 'เข้า' : 'ออก' }}</strong><span>{{ item.rfid_uid }} · {{ new Date(item.scanned_at).toLocaleString('th-TH') }}</span><small>{{ item.synced ? 'ซิงก์แล้ว' : 'รอซิงก์' }} {{ item.sync_error ? `· ${item.sync_error}` : '' }}</small></article></section></section></main></template>
+<style scoped>.admin-page{overflow:auto}.pin-card{width:min(440px,100%);margin:10vh auto 0;padding:28px}.admin-shell{max-width:1180px;margin:0 auto;display:grid;gap:18px}.admin-header{display:flex;justify-content:space-between;align-items:center;gap:16px}h1{margin:0;color:#0f172a;font-size:38px}.tabs{display:flex;gap:8px;flex-wrap:wrap}.tabs button{min-height:48px;border:0;border-radius:14px;padding:8px 16px;background:#e2e8f0;color:#334155;font-weight:700}.tabs button.active{background:#2563eb;color:#fff}.panel{padding:24px}.list{display:grid;gap:10px;max-height:58vh;overflow:auto}.list-item{display:grid;gap:2px;padding:14px;border-radius:14px;background:#f8fafc;border:1px solid #e2e8f0}.split{display:grid;grid-template-columns:1fr 1.4fr;gap:20px}.uid-row{width:100%;display:grid;gap:2px;margin-bottom:8px;padding:14px;border:1px solid #e2e8f0;border-radius:14px;background:#fff;text-align:left}.uid-row-wrap{display:flex;align-items:center;gap:8px}.uid-row-wrap .uid-row{margin-bottom:0;flex:1}.uid-row.active{border-color:#2563eb;background:#eff6ff}.uid-row--disabled{opacity:.5;cursor:not-allowed;background:#f8fafc}.check{display:flex;align-items:center;gap:10px;font-weight:700}.check input{width:22px;height:22px}.info-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:14px 16px;display:grid;gap:8px}.info-row{display:flex;justify-content:space-between;align-items:center;margin:0;gap:8px}.info-label{font-size:13px;font-weight:700;color:#64748b;white-space:nowrap}.info-value{font-size:13px;color:#0f172a;text-align:right;word-break:break-all}.mono{font-family:monospace;font-size:12px}.bind-steps{display:flex;align-items:center;gap:8px;padding:4px 0}.step{font-size:13px;font-weight:700;color:#94a3b8;padding:4px 10px;border-radius:20px}.step.active{color:#2563eb;background:#eff6ff}.step.done{color:#059669;background:#ecfdf5}.step-sep{color:#cbd5e1;font-size:16px}.bind-uid-badge{background:#eff6ff;border:1px solid #bfdbfe;border-radius:12px;padding:10px 16px;font-size:14px;color:#1e40af}.confirm-box{background:#f8fafc;border:1px solid #e2e8f0;border-radius:14px;padding:20px;display:grid;gap:12px}.confirm-row{display:flex;justify-content:space-between;align-items:center;font-size:15px}.student-row{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}.card-badges{display:flex;gap:6px;flex-wrap:wrap}.badge{display:inline-block;padding:3px 10px;border-radius:20px;font-size:12px;font-weight:700}.badge--has{background:#dcfce7;color:#166534;border:1px solid #bbf7d0}.badge--none{background:#f1f5f9;color:#94a3b8;border:1px solid #e2e8f0}.list-item--clickable{cursor:pointer;transition:background 150ms}.list-item--clickable:hover{background:#eff6ff;border-color:#bfdbfe}.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:100;display:flex;align-items:center;justify-content:center;padding:24px}.modal-box{background:#fff;border-radius:20px;padding:28px;width:min(560px,100%);max-height:80vh;overflow:auto;gap:20px}.card-item{display:flex;align-items:center;gap:10px;padding:10px 14px;border:1px solid #e2e8f0;border-radius:12px;background:#f8fafc}.card-item--new{border-color:#bfdbfe;background:#eff6ff}.card-item span:first-child{flex:1}.scan-hint{background:#f0fdf4;border:1px solid #bbf7d0;border-radius:12px;padding:10px 16px;font-size:14px;text-align:center}</style>
