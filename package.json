@@ -1,7 +1,7 @@
 {
   "name": "krudee-timestamp",
-  "version": "1.0.1",
-  "description": "RFID time-stamp kiosk for KruDee schools",
+  "version": "1.0.2",
+  "description": "A desktop application for timestamping attendance using QR codes.",
   "author": {
     "name": "abcprintf",
     "email": "krudee@workitdee.com"

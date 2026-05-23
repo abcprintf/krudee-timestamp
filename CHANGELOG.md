@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+### Added
+- Student code input on Kiosk page as fallback when student forgets RFID card — an always-visible input field accepts both RFID keyboard-wedge output and manually typed student codes; backend falls back to `student_code` lookup when UID is not found in `rfid_uids`
+
+### Fixed
+- Footer version now correctly reflects `package.json` version by injecting `VITE_APP_VERSION` at build time via `electron.vite.config.ts`
+
 ## [1.0.1] - 2026-05-23
 
 ### Added

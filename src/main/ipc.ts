@@ -20,6 +20,7 @@ type CardObject = { id: string; rfid_uid: string; label: string | null }
 function parseCards(raw: string | null): CardObject[] { try { return raw ? JSON.parse(raw) : [] } catch { return [] } }
 function toStudent(row: StudentRow): StudentRow & { rfid_uids_list: string[]; rfid_cards_list: CardObject[] } { return { ...row, rfid_uids_list: parseUids(row.rfid_uids), rfid_cards_list: parseCards(row.rfid_cards) } }
 function findStudentByUid(uid: string): StudentRow | null { const rows = getDb().prepare('SELECT * FROM students WHERE rfid_uids LIKE ?').all(`%${uid}%`) as StudentRow[]; return rows.find((row) => parseUids(row.rfid_uids).includes(uid)) ?? null }
+function findStudentByCode(code: string): StudentRow | null { return getDb().prepare('SELECT * FROM students WHERE student_code = ?').get(code.trim()) as StudentRow | null ?? null }
 
 const SCAN_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
 
@@ -54,9 +55,11 @@ export function registerIpcHandlers(): void {
     return { ok: true, device_id: result.device_id, school: result.school }
   })
   ipcMain.handle('scan:record', async (_event, payload: ScanPayload) => {
-    const uid = payload.uid.trim()
+    const uid = (payload.uid ?? '').trim()
     const scannedAt = payload.scanned_at ? new Date(payload.scanned_at) : new Date()
-    const student = findStudentByUid(uid)
+    // Try RFID UID first, fall back to student_code lookup for manual entry
+    let student = findStudentByUid(uid)
+    if (!student) student = findStudentByCode(uid)
 
     // Duplicate guard: อิง last scan จริงๆ วันนี้ ถ้าแตะภายใน cooldown → ไม่บันทึกใหม่
     if (student) {
