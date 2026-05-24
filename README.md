@@ -1,6 +1,6 @@
-# KruDee Timestamp
+# ครูดี Timestamp
 
-ระบบ kiosk สแกนบัตร RFID สำหรับโรงเรียนในโครงการ KruDee นักเรียนแตะบัตร RFID (keyboard-wedge) หรือกรอกรหัสนักเรียนเป็น fallback เครื่องจะแสดงข้อมูลนักเรียน พูดทักทายภาษาไทย บันทึกเวลาเข้า-ออกใน SQLite และซิงก์กับ KruDee server ทุก 5 นาที
+ระบบ kiosk สแกนบัตร RFID สำหรับโรงเรียนในโครงการ ครูดี นักเรียนแตะบัตร RFID (keyboard-wedge) หรือกรอกรหัสนักเรียนเป็น fallback เครื่องจะแสดงข้อมูลนักเรียน พูดทักทายภาษาไทย บันทึกเวลาเข้า-ออกใน SQLite และซิงก์กับ ครูดี server ทุก 5 นาที
 
 ---
 
@@ -15,6 +15,14 @@
 - หน้า Admin — PIN-protected, ผูก/ยกเลิกบัตร, ดู changelog, ดูประวัติ
 - อัปเดตอัตโนมัติผ่าน `electron-updater`
 - เปิดโปรแกรมพร้อมเครื่อง (configurable)
+
+---
+
+## Screenshots
+
+| หน้าสแกนนักเรียน | หน้า Login Admin | หน้าตั้งค่า Admin |
+|---|---|---|
+| ![Kiosk](screens/timestamp-student.png) | ![Admin Login](screens/timestamp-admin-login.png) | ![Admin Settings](screens/timestamp-admin-setting.png) |
 
 ---
 
