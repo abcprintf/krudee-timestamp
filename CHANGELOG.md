@@ -1,6 +1,11 @@
 # Changelog
 
-## [Unreleased]
+## [1.0.4] - 2026-05-24
+
+### Added
+- README: เพิ่มหัวข้อ "เกี่ยวกับระบบครูดี" อธิบาย KruDee platform และลิงก์ https://krudee.workitdee.com/
+- README: เพิ่ม section Hardware ที่ต้องการ — แนะนำ RFID reader และบัตรที่ใช้งานได้ พร้อม affiliate link
+- README: เพิ่มภาษาอังกฤษควบคู่ภาษาไทยในส่วนหลัก
 
 ## [1.0.3] - 2026-05-24
 

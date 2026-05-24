@@ -1,6 +1,22 @@
-# ครูดี Timestamp
+# ครูดี Timestamp · KruDee Timestamp
 
-ระบบ kiosk สแกนบัตร RFID สำหรับโรงเรียนในโครงการ ครูดี นักเรียนแตะบัตร RFID (keyboard-wedge) หรือกรอกรหัสนักเรียนเป็น fallback เครื่องจะแสดงข้อมูลนักเรียน พูดทักทายภาษาไทย บันทึกเวลาเข้า-ออกใน SQLite และซิงก์กับ ครูดี server ทุก 5 นาที
+ระบบ kiosk สแกนบัตร RFID สำหรับโรงเรียนในโครงการ **ครูดี** — นักเรียนแตะบัตร RFID (keyboard-wedge) หรือกรอกรหัสนักเรียนเป็น fallback เครื่องจะแสดงข้อมูลนักเรียน พูดทักทายภาษาไทย บันทึกเวลาเข้า-ออกใน SQLite และซิงก์กับ ครูดี server ทุก 5 นาที
+
+An RFID attendance kiosk built with Electron + Vue 3 for Thai schools using the [KruDee platform](https://krudee.workitdee.com/).
+
+---
+
+## เกี่ยวกับระบบครูดี · About KruDee
+
+**ครูดี** (KruDee — แปลว่า "ครูที่ดี") คือแพลตฟอร์มบริหารจัดการโรงเรียนออนไลน์สำหรับโรงเรียนไทย ครอบคลุมการบริหารข้อมูลนักเรียน ครู ตารางเรียน และระบบเช็คชื่อเข้าเรียน
+
+**KruDee** KruDee is a school management platform for Thai schools, covering student and staff records, scheduling, and attendance tracking. The platform is accessible at **[krudee.workitdee.com](https://krudee.workitdee.com/)**.
+
+**KruDee Timestamp** คือ client app ที่ทำงานบนเครื่อง kiosk ประจำห้องหรือประตูโรงเรียน เชื่อมต่อกับ KruDee server ผ่าน device token ที่ผูกในขั้นตอน Setup
+
+- ดึงรายชื่อนักเรียน (roster) จาก KruDee server
+- บันทึกเวลาเข้า-ออกใน SQLite ในเครื่อง (offline-first)
+- ซิงก์ข้อมูล attendance กลับ KruDee server อัตโนมัติ
 
 ---
 
@@ -26,6 +42,19 @@
 
 ---
 
+## Hardware ที่ต้องการ · Required Hardware
+
+โปรแกรมนี้ใช้ RFID reader แบบ keyboard-wedge (USB, 125KHz EM4100) — เสียบ USB แล้วใช้งานได้เลย ไม่ต้องติดตั้ง driver
+
+| อุปกรณ์ | ราคาโดยประมาณ | ลิงก์ |
+|---|---|---|
+| RFID USB Card Reader 125KHz EM4100 | ฿160 | [ดูใน Shopee](https://s.shopee.co.th/9ALhw2HRzv) (affiliate link) |
+| บัตร RFID 125KHz 1.8mm (10 ใบ, copy ไม่ได้) | ฿61 | [ดูใน Shopee](https://s.shopee.co.th/8ATAkKfC2W) (affiliate link) |
+
+> ใช้ RFID 125KHz EM4100 format เท่านั้น — บัตร Mifare (13.56MHz) ไม่รองรับ
+
+---
+
 ## Development
 
 ```bash
@@ -35,7 +64,7 @@ npm run typecheck # vue-tsc --noEmit
 npm run build     # build ไปที่ out/
 ```
 
-Default server URL: `http://localhost:3000`
+Default server URL (dev): `http://localhost:3000`  
 Production URL: `https://krudee.workitdee.com`
 
 ---
@@ -76,7 +105,8 @@ src/
 
 ## Contributing
 
-โปรเจคนี้เปิดรับนักพัฒนาที่อยากช่วยพัฒนาระบบเช็คชื่อนักเรียนให้โรงเรียนไทย
+โปรเจคนี้เปิดรับนักพัฒนาที่อยากช่วยพัฒนาระบบเช็คชื่อนักเรียนให้โรงเรียนไทย  
+This project welcomes contributors who want to improve attendance tracking for Thai schools.
 
 ### แนวทางการมีส่วนร่วม
 
@@ -101,6 +131,7 @@ src/
 - renderer → main ผ่าน IPC เท่านั้น (ดู `src/main/ipc.ts`)
 - String ที่แสดงผลต่อผู้ใช้เป็นภาษาไทย
 
-### ติดต่อ
+### ติดต่อ · Contact
 
-เปิด Issue บน GitHub หรือส่ง email มาที่ [krudee@workitdee.com](mailto:krudee@workitdee.com)
+เปิด Issue บน GitHub หรือส่ง email มาที่ [krudee@workitdee.com](mailto:krudee@workitdee.com)  
+Open an issue on GitHub or email [krudee@workitdee.com](mailto:krudee@workitdee.com)
