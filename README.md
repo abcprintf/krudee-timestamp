@@ -71,3 +71,36 @@ src/
 ## Changelog
 
 ดู [CHANGELOG.md](CHANGELOG.md) หรือเปิดหน้า Admin → tab "Changelog" ในแอป
+
+---
+
+## Contributing
+
+โปรเจคนี้เปิดรับนักพัฒนาที่อยากช่วยพัฒนาระบบเช็คชื่อนักเรียนให้โรงเรียนไทย
+
+### แนวทางการมีส่วนร่วม
+
+1. **Fork** repo นี้แล้ว clone ลงเครื่อง
+2. สร้าง branch ใหม่จาก `main` เช่น `feature/your-feature`
+3. รัน `npm install && npm run dev` เพื่อเริ่ม dev server
+4. แก้ไขและรัน `npm run typecheck` ให้ผ่านก่อน commit
+5. เปิด Pull Request มาที่ `main` พร้อมอธิบายว่าแก้/เพิ่มอะไร
+
+### สิ่งที่อยากให้ช่วย
+
+- รองรับ RFID reader แบบ Serial/HID (`src/main/rfid/reader.ts` ยังเป็น stub)
+- UI ภาษาไทยให้ครบและสวยขึ้น
+- ระบบรายงานสรุปการเข้าเรียน
+- Offline-first ที่แข็งแกร่งขึ้น — queue sync เมื่อกลับมา online
+- Pre-rendered TTS cache (`src/main/tts/cache.ts` ยังเป็น stub)
+- Test coverage
+
+### Code Style
+
+- TypeScript เต็มรูปแบบ ไม่มี `any` โดยไม่จำเป็น
+- renderer → main ผ่าน IPC เท่านั้น (ดู `src/main/ipc.ts`)
+- String ที่แสดงผลต่อผู้ใช้เป็นภาษาไทย
+
+### ติดต่อ
+
+เปิด Issue บน GitHub หรือส่ง email มาที่ [krudee@workitdee.com](mailto:krudee@workitdee.com)
