@@ -12,6 +12,15 @@ const tab = ref<'students' | 'cards' | 'settings' | 'history' | 'changelog'>('st
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.0.4',
+    date: '24 พ.ค. 2568',
+    added: [
+      'README: หัวข้อ "เกี่ยวกับระบบครูดี" + ลิงก์ krudee.workitdee.com',
+      'README: แนะนำ hardware RFID reader และบัตรที่ใช้งานได้',
+      'README: เพิ่มภาษาอังกฤษควบคู่ภาษาไทยในส่วนหลัก',
+    ],
+  },
+  {
     version: '1.0.3',
     date: '',
     added: [
