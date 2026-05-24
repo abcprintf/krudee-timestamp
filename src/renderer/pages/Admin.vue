@@ -14,7 +14,12 @@ const changelog: { version: string; date: string; added?: string[]; fixed?: stri
   {
     version: '1.0.3',
     date: '',
-    added: ['กรอกรหัสนักเรียนบนหน้า Kiosk เป็น fallback เมื่อลืมบัตร RFID'],
+    added: [
+      'กรอกรหัสนักเรียนบนหน้า Kiosk เป็น fallback เมื่อลืมบัตร RFID',
+      'tab Changelog ในหน้า Admin — ดูประวัติ version ในแอปได้เลย',
+      'build macOS ใน GitHub Actions release workflow',
+      'เปิดรับนักพัฒนาร่วมพัฒนา — Contributing section ใน README',
+    ],
     fixed: ['แสดงเวอร์ชันในหน้าจอจาก package.json ถูกต้องแล้ว'],
   },
   {
