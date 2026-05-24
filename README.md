@@ -1,29 +1,65 @@
 # KruDee Timestamp
 
-Electron RFID timestamp kiosk for KruDee schools. Students tap keyboard-wedge RFID cards; the kiosk displays the matched student, speaks a Thai greeting, stores events locally in SQLite, and syncs with the KruDee server every 5 minutes.
+ระบบ kiosk สแกนบัตร RFID สำหรับโรงเรียนในโครงการ KruDee นักเรียนแตะบัตร RFID (keyboard-wedge) หรือกรอกรหัสนักเรียนเป็น fallback เครื่องจะแสดงข้อมูลนักเรียน พูดทักทายภาษาไทย บันทึกเวลาเข้า-ออกใน SQLite และซิงก์กับ KruDee server ทุก 5 นาที
+
+---
+
+## Features
+
+- สแกน RFID keyboard-wedge พร้อม cooldown 30 นาทีต่อนักเรียน
+- กรอกรหัสนักเรียนเป็น fallback เมื่อลืมบัตร
+- ตรวจจับประเภทเข้า/ออก รองรับ `entry`, `exit`, `both`
+- เสียงทักทายภาษาไทยผ่าน TTS (espeak / say / PowerShell)
+- ฐานข้อมูล SQLite ในเครื่อง — ทำงานได้แม้ไม่มีอินเทอร์เน็ต
+- ดึงรายชื่อนักเรียนทุก 30 นาที / ซิงก์ attendance ทุก 5 นาที
+- หน้า Admin — PIN-protected, ผูก/ยกเลิกบัตร, ดู changelog, ดูประวัติ
+- อัปเดตอัตโนมัติผ่าน `electron-updater`
+- เปิดโปรแกรมพร้อมเครื่อง (configurable)
+
+---
 
 ## Development
 
 ```bash
-npm install
-npm run dev
-npm run typecheck
-npm run build
+npm install       # ติดตั้ง dependencies + electron native modules
+npm run dev       # electron-vite dev server
+npm run typecheck # vue-tsc --noEmit
+npm run build     # build ไปที่ out/
 ```
 
-Default server base URL is `http://localhost:3000`.
+Default server URL: `http://localhost:3000`
+Production URL: `https://krudee.workitdee.com`
 
-## Packaging
+---
+
+## Packaging & Release
 
 ```bash
-npm run build:linux
-npm run build:win
-npm run build:mac
+npm run build:win    # Windows (NSIS installer)
+npm run build:linux  # Linux (AppImage + deb)
+npm run build:mac    # macOS (dmg)
 ```
 
-## Notes
+### Auto Release (GitHub Actions)
 
-- Keyboard-wedge RFID capture runs in the renderer via keydown buffering.
-- Serial/HID readers can later implement `src/main/rfid/reader.ts`.
-- TTS uses Linux `espeak`, macOS `say`, and Windows PowerShell SpeechSynthesizer.
-- `src/main/tts/cache.ts` is a stub for future cached speech assets.
+สร้าง Release บน GitHub → Actions จะ build และอัปโหลดไฟล์ติดตั้งทุก platform โดยอัตโนมัติ
+ไม่ต้องตั้ง secret เพิ่ม — ใช้ `GITHUB_TOKEN` ที่ GitHub สร้างให้อัตโนมัติ
+
+---
+
+## Architecture
+
+```
+src/
+├── main/        # Node process — SQLite, IPC handlers, sync, TTS, config
+├── preload/     # contextBridge — typed API bridge ระหว่าง main ↔ renderer
+└── renderer/    # Vue 3 SPA — Kiosk, Admin, Setup, Offline pages
+```
+
+ดูรายละเอียดใน [CLAUDE.md](CLAUDE.md)
+
+---
+
+## Changelog
+
+ดู [CHANGELOG.md](CHANGELOG.md) หรือเปิดหน้า Admin → tab "Changelog" ในแอป
