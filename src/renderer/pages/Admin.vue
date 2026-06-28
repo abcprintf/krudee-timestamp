@@ -12,6 +12,18 @@ const tab = ref<'students' | 'cards' | 'settings' | 'history' | 'changelog'>('st
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.0.5',
+    date: '28 มิถุนายน 2568',
+    added: [
+      'QueueBadge แสดง countdown นับถอยหลังถึงรอบ sync อัตโนมัติถัดไป (ทุก 5 นาที)',
+      'Dev logs ใน attendance sync — แสดง endpoint URL, รายการที่ส่ง, response และ error เฉพาะ mode development',
+    ],
+    fixed: [
+      'Attendance sync ไม่ส่ง request เมื่อคิวเป็น 0',
+      'แก้ bug คิวค้างหลัง sync — mark synced ทุก event ทันทีที่ server ตอบกลับสำเร็จ',
+    ],
+  },
+  {
     version: '1.0.4',
     date: '24 พ.ค. 2568',
     added: [
