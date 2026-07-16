@@ -18,9 +18,14 @@ win:
   target: nsis
   icon: resources/icon.ico
 mac:
-  target: dmg
+  target:
+    - dmg
+    - zip
   category: public.app-category.education
   icon: resources/icon.icns
+  hardenedRuntime: true
+  gatekeeperAssess: false
+  notarize: true
 nsis:
   oneClick: false
   perMachine: false

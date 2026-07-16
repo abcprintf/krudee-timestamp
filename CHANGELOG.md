@@ -1,5 +1,15 @@
 # Changelog
 
+## [1.0.6] - 2026-07-16
+
+### Added
+- เอกสาร `RELEASE.md` — ขั้นตอนออกเวอร์ชันใหม่และการตั้งค่า macOS code signing
+- macOS: เพิ่ม `zip` target + hardened runtime + notarize config เพื่อรองรับ auto-update บน Mac
+- CI: ส่ง signing secrets (CSC_LINK, APPLE_ID ฯลฯ) เข้า job build-mac
+
+### Fixed
+- ปิด auto-updater ใน dev mode (`app.isPackaged` guard) — ไม่มี error log ตอน `npm run dev`
+
 ## [1.0.5] - 2026-06-28
 
 ### Added
