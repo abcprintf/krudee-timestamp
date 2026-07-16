@@ -1,6 +1,7 @@
 import { autoUpdater } from 'electron-updater'
 import { app } from 'electron'
 import type { BrowserWindow } from 'electron'
+import { logError } from './logger'
 
 let initialized = false
 
@@ -28,17 +29,17 @@ export function initUpdater(win: BrowserWindow): void {
   })
 
   autoUpdater.on('error', (err) => {
-    console.error('[updater] error:', err.stack ?? err.message)
+    logError('updater', err)
   })
 
   const timeoutId = setTimeout(() => {
     if (win.isDestroyed()) return
-    autoUpdater.checkForUpdates().catch((e) => console.error('[updater] check failed:', e))
+    autoUpdater.checkForUpdates().catch((e) => logError('updater', 'check failed', e))
   }, 5_000)
 
   const intervalId = setInterval(() => {
     if (win.isDestroyed()) return
-    autoUpdater.checkForUpdates().catch((e) => console.error('[updater] check failed:', e))
+    autoUpdater.checkForUpdates().catch((e) => logError('updater', 'check failed', e))
   }, 4 * 60 * 60 * 1_000)
 
   win.on('closed', () => {

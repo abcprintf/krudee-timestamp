@@ -1,6 +1,7 @@
 import { apiFetch } from '../api/client'
 import { getDb } from '../db/client'
-import { downloadStudentPhoto } from '../photos'
+import { deletePhotoFile, downloadStudentPhoto, hasPhotoFile } from '../photos'
+import { log } from '../logger'
 
 export interface RosterStudent {
   id: string; student_code?: string | null; prefix?: string | null; first_name: string; last_name: string; nickname?: string | null;
@@ -31,6 +32,8 @@ export async function syncRoster(): Promise<{ count: number }> {
   // migrate: ensure rfid_cards column exists (safe on existing DBs)
   try { getDb().exec('ALTER TABLE students ADD COLUMN rfid_cards TEXT') } catch { /* already exists */ }
 
+  const existing = new Map((getDb().prepare('SELECT id, photo_url, photo_local_path FROM students').all() as Array<{ id: string; photo_url: string | null; photo_local_path: string | null }>).map((row) => [row.id, row]))
+
   const stmt = getDb().prepare(`INSERT INTO students (id, student_code, prefix, first_name, last_name, nickname, photo_url, classroom_name, class_number, rfid_uids, rfid_cards, updated_at)
     VALUES (@id, @student_code, @prefix, @first_name, @last_name, @nickname, @photo_url, @classroom_name, @class_number, @rfid_uids, @rfid_cards, @updated_at)
     ON CONFLICT(id) DO UPDATE SET student_code=excluded.student_code, prefix=excluded.prefix, first_name=excluded.first_name, last_name=excluded.last_name,
@@ -42,6 +45,26 @@ export async function syncRoster(): Promise<{ count: number }> {
     rfid_uids: JSON.stringify(extractUids(s)), rfid_cards: JSON.stringify(extractCards(s)), updated_at: s.updated_at ?? new Date().toISOString()
   })))
   tx(students)
-  await Promise.all(students.map((student) => downloadStudentPhoto(student.id, student.photo_url)))
+
+  // ลบนักเรียนที่หายไปจากเซิร์ฟเวอร์ (ย้าย/ลาออก) — ข้ามถ้า payload ว่างกันข้อมูลหายยกเครื่องจาก glitch ฝั่งเซิร์ฟเวอร์
+  if (students.length > 0) {
+    const keep = new Set(students.map((s) => s.id))
+    const removed = [...existing.keys()].filter((id) => !keep.has(id))
+    if (removed.length > 0) {
+      const del = getDb().prepare('DELETE FROM students WHERE id = ?')
+      getDb().transaction(() => removed.forEach((id) => del.run(id)))()
+      removed.forEach((id) => deletePhotoFile(id))
+      log('roster', `ลบนักเรียนที่หายจากเซิร์ฟเวอร์ ${removed.length} คน`)
+    }
+  }
+
+  // โหลดรูปเฉพาะที่ url เปลี่ยนหรือไฟล์หาย — ไม่โหลดทุกคนซ้ำทุกรอบ sync
+  const needsPhoto = students.filter((s) => {
+    if (!s.photo_url) return false
+    const prev = existing.get(s.id)
+    return !prev || prev.photo_url !== s.photo_url || !hasPhotoFile(s.id, prev.photo_local_path)
+  })
+  if (needsPhoto.length > 0) log('roster', `โหลดรูปนักเรียน ${needsPhoto.length}/${students.length} คน`)
+  await Promise.all(needsPhoto.map((student) => downloadStudentPhoto(student.id, student.photo_url)))
   return { count: students.length }
 }

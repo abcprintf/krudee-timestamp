@@ -7,6 +7,7 @@ const api = {
   sync: { now: () => ipcRenderer.invoke('sync:now'), roster: () => ipcRenderer.invoke('roster:sync') },
   device: {
     rfidStatus: () => ipcRenderer.invoke('device:rfid-status'),
+    clockSkew: () => ipcRenderer.invoke('device:clock-skew'),
     onRfidStatusChange: (cb: (status: { connected: boolean; count: number }) => void) => {
       const listener = (_: unknown, status: { connected: boolean; count: number }) => cb(status)
       ipcRenderer.on('rfid-device-changed', listener)
@@ -15,6 +16,7 @@ const api = {
   },
   admin: {
     verifyPin: (pin: string) => ipcRenderer.invoke('admin:verify-pin', pin), students: (query?: string) => ipcRenderer.invoke('admin:students', query), unknownUids: () => ipcRenderer.invoke('admin:unknown-uids'),
+    dailySummary: () => ipcRenderer.invoke('admin:daily-summary'),
     bindCard: (payload: { student_id: string; rfid_uid: string; label?: string }) => ipcRenderer.invoke('admin:bind-card', payload), unbindCard: (payload: { card_id: string }) => ipcRenderer.invoke('admin:unbind-card', payload),
     clearUnknownUids: () => ipcRenderer.invoke('admin:clear-unknown-uids'),
     deleteUnknownUid: (uid: string) => ipcRenderer.invoke('admin:delete-unknown-uid', uid),

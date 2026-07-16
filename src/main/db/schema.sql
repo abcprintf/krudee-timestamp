@@ -30,3 +30,5 @@ CREATE TABLE IF NOT EXISTS scan_events (
   created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 CREATE INDEX IF NOT EXISTS idx_scan_events_synced ON scan_events(synced);
+CREATE INDEX IF NOT EXISTS idx_scan_events_scanned_at ON scan_events(scanned_at);
+CREATE INDEX IF NOT EXISTS idx_scan_events_student_day ON scan_events(matched_student_id, scanned_at);
