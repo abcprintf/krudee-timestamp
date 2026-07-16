@@ -16,6 +16,7 @@ const syncing = ref(false)
 const feedback = ref({ kind: 'idle' as 'entry' | 'exit' | 'unknown' | 'duplicate' | 'idle', message: 'พร้อมสแกนบัตร' })
 const schoolName = ref('')
 const rfidConnected = ref(false)
+const online = ref(navigator.onLine)
 const scanHistory = ref<ScanHistoryRow[]>([])
 let clearTimer: number | undefined
 let unsubRfid: (() => void) | null = null
@@ -63,9 +64,15 @@ async function submitScan(uid: string): Promise<void> {
 }
 
 function onInputKeydown(event: KeyboardEvent): void {
-  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') { void router.push('/admin'); return }
   if (event.key === 'Enter') { event.preventDefault(); void submitScan(inputValue.value.trim()) }
 }
+
+// ดักที่ window — เข้า Admin ได้แม้ focus หลุดจากช่อง input
+function onWindowKeydown(event: KeyboardEvent): void {
+  if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === 'a') { event.preventDefault(); void router.push('/admin') }
+}
+function onOnline(): void { online.value = true; void syncNow() }
+function onOffline(): void { online.value = false }
 
 async function devClearScans(): Promise<void> {
   await window.krudee.admin.devClearScans()
@@ -82,6 +89,9 @@ async function syncNow(): Promise<void> {
 }
 
 onMounted(async () => {
+  window.addEventListener('keydown', onWindowKeydown)
+  window.addEventListener('online', onOnline)
+  window.addEventListener('offline', onOffline)
   queueCount.value = await window.krudee.scan.queueCount()
   scanHistory.value = await window.krudee.scan.history()
   refocusInput()
@@ -92,7 +102,12 @@ onMounted(async () => {
   schoolName.value = (config as { school_name?: string }).school_name ?? ''
 })
 
-onBeforeUnmount(() => { window.clearTimeout(clearTimer); unsubRfid?.() })
+onBeforeUnmount(() => {
+  window.clearTimeout(clearTimer); unsubRfid?.()
+  window.removeEventListener('keydown', onWindowKeydown)
+  window.removeEventListener('online', onOnline)
+  window.removeEventListener('offline', onOffline)
+})
 </script>
 
 <template>
@@ -103,6 +118,9 @@ onBeforeUnmount(() => { window.clearTimeout(clearTimer); unsubRfid?.() })
         <p class="muted">แตะบัตร RFID หรือพิมพ์รหัสนักเรียน แล้วกด Enter</p>
       </div>
       <div class="topbar-right">
+        <span class="rfid-status" :class="online ? 'rfid-status--on' : 'rfid-status--off'">
+          <span class="rfid-dot" />{{ online ? 'ออนไลน์' : 'ออฟไลน์ — บันทึกในเครื่อง' }}
+        </span>
         <span class="rfid-status" :class="rfidConnected ? 'rfid-status--on' : 'rfid-status--off'">
           <span class="rfid-dot" />{{ rfidConnected ? 'เครื่องแตะบัตรพร้อม' : 'ไม่พบเครื่องแตะบัตร' }}
         </span>
