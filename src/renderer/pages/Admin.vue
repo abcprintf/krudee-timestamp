@@ -12,6 +12,11 @@ const tab = ref<'students' | 'cards' | 'settings' | 'history' | 'changelog'>('st
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.0.7',
+    date: '17 กรกฎาคม 2569',
+    added: ['ทดสอบระบบ auto-update ครบวงจร — ยืนยันการอัปเดตอัตโนมัติทุกแพลตฟอร์ม รวม macOS'],
+  },
+  {
     version: '1.0.6',
     date: '16 กรกฎาคม 2569',
     added: [
