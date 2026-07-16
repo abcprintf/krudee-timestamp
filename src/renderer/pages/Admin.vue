@@ -12,6 +12,15 @@ const tab = ref<'students' | 'cards' | 'settings' | 'history' | 'changelog'>('st
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.0.6',
+    date: '16 กรกฎาคม 2569',
+    added: [
+      'รองรับ auto-update บน macOS (zip target + notarize)',
+      'เอกสาร RELEASE.md — ขั้นตอนออกเวอร์ชันใหม่',
+    ],
+    fixed: ['ปิด auto-updater ใน dev mode — ไม่มี error log ตอนพัฒนา'],
+  },
+  {
     version: '1.0.5',
     date: '28 มิถุนายน 2568',
     added: [

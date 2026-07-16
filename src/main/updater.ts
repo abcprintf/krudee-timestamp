@@ -1,9 +1,11 @@
 import { autoUpdater } from 'electron-updater'
+import { app } from 'electron'
 import type { BrowserWindow } from 'electron'
 
 let initialized = false
 
 export function initUpdater(win: BrowserWindow): void {
+  if (!app.isPackaged) return
   if (initialized) return
   initialized = true
 
