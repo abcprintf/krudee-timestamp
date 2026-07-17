@@ -29,6 +29,7 @@ function createWindow(): void {
   // ต้อง setBounds ก่อน setFullScreen — fullscreen: true ใน constructor จะ ignore x,y
   mainWindow.setBounds(primary.bounds)
   mainWindow.setFullScreen(true)
+  if (getConfig().kiosk_lock === 'true') mainWindow.setKiosk(true)
   mainWindow.on('closed', () => { mainWindow = null })
   if (process.env.ELECTRON_RENDERER_URL) void mainWindow.loadURL(process.env.ELECTRON_RENDERER_URL)
   else void mainWindow.loadFile(join(__dirname, '../renderer/index.html'))

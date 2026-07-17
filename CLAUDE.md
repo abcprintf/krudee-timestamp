@@ -12,11 +12,10 @@ KruDee Timestamp is an Electron + Vue 3 RFID attendance kiosk for Thai schools. 
 npm install            # installs and runs electron-builder install-app-deps (postinstall)
 npm run dev            # electron-vite dev (auto-patches Electron app name on first run)
 npm run typecheck      # vue-tsc --noEmit
+npm test               # vitest run (pure logic in src/main/scan-logic.ts, src/main/sync/response.ts)
 npm run build          # electron-vite build (output to out/)
 npm run build:mac      # build + electron-builder --mac (also :win, :linux)
 ```
-
-There is no test runner configured. `typecheck` is the closest thing to a verification gate.
 
 Default dev server base URL is `http://localhost:3000`; production default is `https://krudee.workitdee.com` (see `src/main/config.ts`).
 
@@ -32,15 +31,15 @@ Three-process Electron layout under `src/`:
 
 1. `Kiosk.vue` buffers keyboard events (keyboard-wedge RFID readers act as a HID keyboard). The student-code fallback uses the same channel.
 2. Renderer invokes the `scan:record` IPC → `src/main/ipc.ts`.
-3. Handler looks up by `rfid_uids` first, then by `student_code`, applies a **30-minute per-student cooldown** (returns `duplicate: true` without inserting), determines `entry` vs `exit` based on the configured `role` (`entry` / `exit` / `both`) and today's prior events, inserts into `scan_events`, fires TTS greeting, and returns `queue_count` of unsynced rows.
-4. `src/main/sync/scheduler.ts` runs `node-cron`: attendance + heartbeat every 5 min, roster pull every 30 min.
+3. Handler looks up by `rfid_uids` first (exact match via `json_each`), then by `student_code`, applies a **per-student cooldown** (configurable `scan_cooldown_minutes`, default 30 — returns `duplicate: true` without inserting), determines `entry` vs `exit` based on the configured `role` (`entry` / `exit` / `both`), today's prior events, and `exit_after_hour` (both-mode: first scan after this hour counts as exit), inserts into `scan_events`, fires TTS greeting, schedules a debounced sync, and returns `queue_count` of unsynced rows.
+4. `src/main/sync/scheduler.ts` runs `node-cron`: attendance + heartbeat every 5 min, roster pull every 30 min, prune of old synced events daily — plus a debounced sync a few seconds after each scan.
 
-When changing scan logic, the cooldown + `determineKind` rules in `ipc.ts` are load-bearing — entry/exit is decided server-side-of-Electron, not by the renderer.
+When changing scan logic, the rules in `src/main/scan-logic.ts` (pure, unit-tested) + their wiring in `ipc.ts` are load-bearing — entry/exit is decided server-side-of-Electron, not by the renderer.
 
 ### Subsystems
 
 - **DB** (`src/main/db/`): `better-sqlite3` opened at `app.getPath('userData')/krudee-timestamp.sqlite`. Schema is executed from `schema.sql` on every `getDb()` (idempotent `CREATE TABLE IF NOT EXISTS`). The file is resolved from `process.cwd()`, `resourcesPath`, or `__dirname/db/` — keep all three working when packaging. WAL mode + foreign keys on.
-- **Config** (`src/main/config.ts`): a `config` key/value table in the same SQLite DB, accessed via `getConfig()` / `setConfigValues()`. There is no JSON config file — all settings (base_url, device_token, role, admin_pin, tts_enabled, auto_start) live in SQLite.
+- **Config** (`src/main/config.ts`): a `config` key/value table in the same SQLite DB, accessed via `getConfig()` / `setConfigValues()`. There is no JSON config file — all settings (base_url, device_token, role, admin_pin_hash, tts_enabled, auto_start, exit_after_hour, late_after, scan_cooldown_minutes, greeting templates, kiosk_lock) live in SQLite. The renderer only ever sees the whitelisted subset from `getSafeConfig()` — never tokens or the PIN hash.
 - **API client** (`src/main/api/client.ts`): `ofetch` wrapper; attaches the device token from config. Setup flow calls `registerDevice`, then the device_id/device_token are persisted and used for every subsequent call.
 - **Sync** (`src/main/sync/`): `attendance.ts` pushes unsynced `scan_events`, `roster.ts` pulls students, `scheduler.ts` owns the cron tasks. `syncNow()` has a `running` guard — don't add parallel callers.
 - **RFID** (`src/main/rfid/`, `src/main/rfid-device.ts`): Keyboard-wedge is the primary path and lives in the renderer. `src/main/rfid/reader.ts` is the stub for future serial/HID readers. `rfid-device.ts` uses the `usb` package to detect when a reader is plugged in.

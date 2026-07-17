@@ -1,5 +1,5 @@
 import { app, net, protocol } from 'electron'
-import { createWriteStream, existsSync, mkdirSync } from 'node:fs'
+import { createWriteStream, existsSync, mkdirSync, unlinkSync } from 'node:fs'
 import { join } from 'node:path'
 import { pathToFileURL } from 'node:url'
 import { pipeline } from 'node:stream/promises'
@@ -8,6 +8,8 @@ import { getDb } from './db/client'
 
 export function getPhotosDir(): string { const dir = join(app.getPath('userData'), 'photos'); mkdirSync(dir, { recursive: true }); return dir }
 export function getPhotoPath(studentId: string): string { return join(getPhotosDir(), `${studentId}.jpg`) }
+export function hasPhotoFile(studentId: string, localPath?: string | null): boolean { return existsSync(localPath || getPhotoPath(studentId)) }
+export function deletePhotoFile(studentId: string): void { try { unlinkSync(getPhotoPath(studentId)) } catch { /* ไม่มีไฟล์ก็ไม่เป็นไร */ } }
 
 export function registerStudentPhotoProtocol(): void {
   protocol.handle('student-photo', async (request) => {

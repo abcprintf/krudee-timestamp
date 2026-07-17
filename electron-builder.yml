@@ -9,6 +9,7 @@ extraResources:
   - from: src/main/db/schema.sql
     to: schema.sql
 linux:
+  artifactName: ${productName}.${ext}
   target:
     - AppImage
     - deb
