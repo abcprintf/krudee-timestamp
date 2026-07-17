@@ -13,13 +13,14 @@ export interface AppConfig {
   admin_pin?: string
   role: KioskRole
   exit_after_hour: string  // "14" = 14:00, ถ้าแตะหลังเวลานี้ถือว่า exit
+  scan_cooldown_minutes: string  // กันแตะซ้ำ (นาที) — ตั้งต่ำๆ ได้ตอนทดสอบ
   tts_enabled: string
   auto_start: string
   app_version?: string
 }
 
 const IS_DEV = process.env.NODE_ENV === 'development'
-const DEFAULTS: AppConfig = { base_url: IS_DEV ? 'http://localhost:3000' : 'https://krudee.workitdee.com', role: 'both', exit_after_hour: '14', tts_enabled: 'true', auto_start: 'false' }
+const DEFAULTS: AppConfig = { base_url: IS_DEV ? 'http://localhost:3000' : 'https://krudee.workitdee.com', role: 'both', exit_after_hour: '10', scan_cooldown_minutes: '30', tts_enabled: 'true', auto_start: 'false' }
 
 export function getConfigValue(key: string): string | undefined {
   return (getDb().prepare('SELECT value FROM config WHERE key = ?').get(key) as { value: string } | undefined)?.value
