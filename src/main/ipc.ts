@@ -33,11 +33,6 @@ function findLastScanToday(studentId: string, scannedAt: Date): { kind: ScanKind
   const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
   return getDb().prepare(`SELECT kind, scanned_at FROM scan_events WHERE matched_student_id = ? AND scanned_at >= ? ORDER BY scanned_at DESC LIMIT 1`).get(studentId, dayStart.toISOString()) as { kind: ScanKind; scanned_at: string } | null
 }
-function hasEntryToday(studentId: string | null, scannedAt: Date): boolean {
-  if (!studentId) return false
-  const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
-  return Boolean(getDb().prepare(`SELECT id FROM scan_events WHERE matched_student_id = ? AND kind = 'entry' AND scanned_at >= ? LIMIT 1`).get(studentId, dayStart.toISOString()))
-}
 function greeting(kind: ScanKind, student: StudentRow): string {
   const name = student.nickname || student.first_name
   const config = getConfig()
@@ -69,16 +64,17 @@ export function registerIpcHandlers(): void {
     let student = findStudentByUid(uid)
     if (!student) student = findStudentByCode(uid)
 
-    // Duplicate guard: อิง last scan จริงๆ วันนี้ ถ้าแตะภายใน cooldown → ไม่บันทึกใหม่
+    const config = getConfig()
+    const kind = determineKind(config.role, scannedAt, parseExitAfterHour(config.exit_after_hour))
+
+    // Duplicate guard: บล็อกเฉพาะแตะซ้ำ kind เดียวกันภายใน cooldown (เข้า→ออก บันทึกได้ทันที)
     if (student) {
       const last = findLastScanToday(student.id, scannedAt)
-      if (last && isWithinCooldown(last.scanned_at, scannedAt, parseCooldownMs(getConfig().scan_cooldown_minutes))) {
+      if (last && last.kind === kind && isWithinCooldown(last.scanned_at, scannedAt, parseCooldownMs(config.scan_cooldown_minutes))) {
         return { ok: true, duplicate: true, event: { client_event_id: '', rfid_uid: uid, scanned_at: scannedAt.toISOString(), kind: last.kind }, student: toStudent(student), queue_count: getUnsyncedCount() }
       }
     }
 
-    const config = getConfig()
-    const kind = determineKind(config.role, hasEntryToday(student?.id ?? null, scannedAt), scannedAt, parseExitAfterHour(config.exit_after_hour))
     const clientEventId = randomUUID()
     getDb().prepare(`INSERT INTO scan_events (client_event_id, rfid_uid, scanned_at, kind, matched_student_id) VALUES (?, ?, ?, ?, ?)`).run(clientEventId, uid, scannedAt.toISOString(), kind, student?.id ?? null)
     if (student) void speak(greeting(kind, student))

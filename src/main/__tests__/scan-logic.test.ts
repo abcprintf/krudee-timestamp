@@ -4,19 +4,18 @@ import { determineKind, formatGreeting, isWithinCooldown, parseCooldownMs, parse
 const at = (hour: number, minute = 0): Date => { const d = new Date(2026, 6, 16); d.setHours(hour, minute, 0, 0); return d }
 
 describe('determineKind', () => {
-  it('role entry → entry เสมอ', () => { expect(determineKind('entry', true, at(16), 14)).toBe('entry') })
-  it('role exit → exit เสมอ', () => { expect(determineKind('exit', false, at(7), 14)).toBe('exit') })
-  it('both: มี entry วันนี้แล้ว → exit', () => { expect(determineKind('both', true, at(9), 14)).toBe('exit') })
-  it('both: ยังไม่มี entry + แตะตอนเช้า → entry', () => { expect(determineKind('both', false, at(7, 30), 14)).toBe('entry') })
-  it('both: ลืมแตะตอนเช้า แตะครั้งแรกหลัง exit_after_hour → exit', () => { expect(determineKind('both', false, at(15), 14)).toBe('exit') })
-  it('both: แตะตรงชั่วโมงเกณฑ์พอดี → exit', () => { expect(determineKind('both', false, at(14), 14)).toBe('exit') })
-  it('both: ปิดเกณฑ์เวลา (null) → entry แม้แตะเย็น', () => { expect(determineKind('both', false, at(17), null)).toBe('entry') })
+  it('role entry → entry เสมอ', () => { expect(determineKind('entry', at(16), 10)).toBe('entry') })
+  it('role exit → exit เสมอ', () => { expect(determineKind('exit', at(7), 10)).toBe('exit') })
+  it('both: แตะก่อนเวลาตัด → entry', () => { expect(determineKind('both', at(7, 30), 10)).toBe('entry') })
+  it('both: แตะหลังเวลาตัด → exit', () => { expect(determineKind('both', at(15), 10)).toBe('exit') })
+  it('both: แตะตรงชั่วโมงเกณฑ์พอดี → exit', () => { expect(determineKind('both', at(10), 10)).toBe('exit') })
+  it('both: ปิดเกณฑ์เวลา (null) → entry แม้แตะเย็น', () => { expect(determineKind('both', at(17), null)).toBe('entry') })
 })
 
 describe('parseExitAfterHour', () => {
   it('ค่าปกติ', () => { expect(parseExitAfterHour('14')).toBe(14) })
   it('ค่าว่าง = ปิดเกณฑ์', () => { expect(parseExitAfterHour('')).toBeNull(); expect(parseExitAfterHour(undefined)).toBeNull() })
-  it('ค่าเพี้ยน → fallback 14', () => { expect(parseExitAfterHour('abc')).toBe(14); expect(parseExitAfterHour('25')).toBe(14); expect(parseExitAfterHour('-1')).toBe(14) })
+  it('ค่าเพี้ยน → fallback 10', () => { expect(parseExitAfterHour('abc')).toBe(10); expect(parseExitAfterHour('25')).toBe(10); expect(parseExitAfterHour('-1')).toBe(10) })
 })
 
 describe('isWithinCooldown', () => {

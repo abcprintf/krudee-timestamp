@@ -3,7 +3,7 @@ export type KioskRole = 'entry' | 'exit' | 'both'
 export type ScanKind = 'entry' | 'exit'
 
 export const DEFAULT_COOLDOWN_MINUTES = 30
-export const DEFAULT_EXIT_AFTER_HOUR = 14
+export const DEFAULT_EXIT_AFTER_HOUR = 10
 export const DEFAULT_GREETING_ENTRY = 'สวัสดีน้อง{name}'
 export const DEFAULT_GREETING_EXIT = 'เดินทางกลับบ้านปลอดภัยนะคะน้อง{name}'
 
@@ -23,12 +23,11 @@ export function isWithinCooldown(lastScannedAt: string, scannedAt: Date, cooldow
   return msSinceLast >= 0 && msSinceLast < cooldownMs
 }
 
-// กติกาโหมด both: มี entry วันนี้แล้ว → exit ทั้งหมด
-// ยังไม่มี entry → entry ยกเว้นแตะหลัง exit_after_hour (เด็กลืมแตะตอนเช้า แตะตอนเย็น = กลับบ้าน)
-export function determineKind(role: KioskRole, hasEntryToday: boolean, scannedAt: Date, exitAfterHour: number | null): ScanKind {
+// กติกาโหมด both: อิงเวลาล้วน — ก่อน exit_after_hour = entry, ตั้งแต่นั้นไป = exit
+// (คู่กับ cooldown guard ที่บล็อกเฉพาะแตะซ้ำ kind เดิม — เปลี่ยน kind บันทึกได้ทันที)
+export function determineKind(role: KioskRole, scannedAt: Date, exitAfterHour: number | null): ScanKind {
   if (role === 'entry') return 'entry'
   if (role === 'exit') return 'exit'
-  if (hasEntryToday) return 'exit'
   if (exitAfterHour !== null && scannedAt.getHours() >= exitAfterHour) return 'exit'
   return 'entry'
 }
