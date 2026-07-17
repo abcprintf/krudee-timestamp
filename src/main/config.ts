@@ -15,7 +15,7 @@ export interface AppConfig {
   admin_pin_hash?: string
   role: KioskRole
   exit_after_hour: string  // "14" = แตะครั้งแรกหลัง 14:00 ถือว่า exit, "" = ปิดเกณฑ์
-  late_after: string       // "08:00" = entry แรกหลังเวลานี้ถือว่ามาสาย
+  late_after: string       // "08:30" = entry แรกหลังเวลานี้ถือว่ามาสาย
   scan_cooldown_minutes: string
   greeting_entry: string   // รองรับ {name}
   greeting_exit: string
@@ -28,7 +28,7 @@ export interface AppConfig {
 const IS_DEV = process.env.NODE_ENV === 'development'
 const DEFAULTS: AppConfig = {
   base_url: IS_DEV ? 'http://localhost:3000' : 'https://krudee.workitdee.com', role: 'both',
-  exit_after_hour: String(DEFAULT_EXIT_AFTER_HOUR), late_after: '08:00', scan_cooldown_minutes: String(DEFAULT_COOLDOWN_MINUTES),
+  exit_after_hour: String(DEFAULT_EXIT_AFTER_HOUR), late_after: '08:30', scan_cooldown_minutes: String(DEFAULT_COOLDOWN_MINUTES),
   greeting_entry: DEFAULT_GREETING_ENTRY, greeting_exit: DEFAULT_GREETING_EXIT,
   kiosk_lock: 'false', tts_enabled: 'true', auto_start: 'false'
 }

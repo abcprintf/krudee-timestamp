@@ -100,7 +100,7 @@ export function registerIpcHandlers(): void {
   ipcMain.handle('admin:unknown-uids', () => getDb().prepare(`SELECT rfid_uid, COUNT(*) AS count, MAX(scanned_at) AS last_scanned_at FROM scan_events WHERE matched_student_id IS NULL GROUP BY rfid_uid ORDER BY last_scanned_at DESC`).all())
   ipcMain.handle('admin:daily-summary', () => {
     const dayStart = new Date(); dayStart.setHours(0, 0, 0, 0)
-    const lateAfter = getConfig().late_after || '08:00'
+    const lateAfter = getConfig().late_after || '08:30'
     const [lateHour, lateMinute] = lateAfter.split(':').map(Number)
     const lateThreshold = new Date(dayStart); lateThreshold.setHours(Number.isFinite(lateHour) ? lateHour : 8, Number.isFinite(lateMinute) ? lateMinute : 0, 0, 0)
     const rows = getDb().prepare(`SELECT s.id, s.classroom_name, MIN(CASE WHEN se.kind = 'entry' THEN se.scanned_at END) AS first_entry, MAX(CASE WHEN se.kind = 'exit' THEN se.scanned_at END) AS last_exit

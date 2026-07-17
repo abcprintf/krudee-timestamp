@@ -184,7 +184,7 @@ async function saveSettings(): Promise<void> {
       base_url: config.value.base_url, device_name: config.value.device_name ?? '', role: config.value.role,
       tts_enabled: config.value.tts_enabled, auto_start: config.value.auto_start,
       // String() จำเป็น — input type=number ทำให้ v-model cast เป็น number แต่ IPC รับเฉพาะ string
-      exit_after_hour: String(config.value.exit_after_hour ?? ''), late_after: config.value.late_after ?? '08:00',
+      exit_after_hour: String(config.value.exit_after_hour ?? ''), late_after: config.value.late_after ?? '08:30',
       scan_cooldown_minutes: String(config.value.scan_cooldown_minutes ?? '30'),
       greeting_entry: config.value.greeting_entry ?? '', greeting_exit: config.value.greeting_exit ?? '',
       kiosk_lock: config.value.kiosk_lock ?? 'false',
