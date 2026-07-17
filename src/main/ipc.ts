@@ -29,15 +29,13 @@ function findLastScanToday(studentId: string, scannedAt: Date): { kind: 'entry' 
   return getDb().prepare(`SELECT kind, scanned_at FROM scan_events WHERE matched_student_id = ? AND scanned_at >= ? ORDER BY scanned_at DESC LIMIT 1`).get(studentId, dayStart.toISOString()) as { kind: 'entry' | 'exit'; scanned_at: string } | null
 }
 
-function determineKind(role: KioskRole, studentId: string | null, scannedAt: Date): 'entry' | 'exit' {
+function determineKind(role: KioskRole, scannedAt: Date): 'entry' | 'exit' {
   if (role === 'entry') return 'entry'
   if (role === 'exit') return 'exit'
-  if (!studentId) return 'entry'
-  // ถ้ายังไม่มี entry วันนี้ → entry เสมอ (ไม่ว่ากี่โมง)
-  // ถ้ามี entry วันนี้แล้ว → exit ทั้งหมด
-  const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
-  const entryToday = getDb().prepare(`SELECT id FROM scan_events WHERE matched_student_id = ? AND kind = 'entry' AND scanned_at >= ? LIMIT 1`).get(studentId, dayStart.toISOString())
-  return entryToday ? 'exit' : 'entry'
+  // ตัดสินตามเวลา: ก่อน exit_after_hour = entry, ตั้งแต่นั้นไป = exit
+  const parsed = Number(getConfig().exit_after_hour)
+  const cutoffHour = Number.isFinite(parsed) && parsed >= 0 && parsed <= 23 ? parsed : 10
+  return scannedAt.getHours() < cutoffHour ? 'entry' : 'exit'
 }
 function greeting(kind: 'entry' | 'exit', student: StudentRow): string { const name = student.nickname || student.first_name; return kind === 'entry' ? `สวัสดีน้อง${name}` : `เดินทางกลับบ้านปลอดภัยนะคะน้อง${name}` }
 
@@ -61,19 +59,19 @@ export function registerIpcHandlers(): void {
     let student = findStudentByUid(uid)
     if (!student) student = findStudentByCode(uid)
 
-    // Duplicate guard: อิง last scan จริงๆ วันนี้ ถ้าแตะภายใน cooldown → ไม่บันทึกใหม่
+    const kind = determineKind(getConfig().role, scannedAt)
+
+    // Duplicate guard: บล็อกเฉพาะแตะซ้ำ kind เดียวกันภายใน cooldown (เข้า→ออก บันทึกได้ทันที)
     if (student) {
       const last = findLastScanToday(student.id, scannedAt)
-      if (last) {
+      if (last && last.kind === kind) {
         const msSinceLast = scannedAt.getTime() - new Date(last.scanned_at).getTime()
         if (msSinceLast < getScanCooldownMs()) {
-          // ยังอยู่ใน cooldown → duplicate, return kind เดิม
           return { ok: true, duplicate: true, event: { client_event_id: '', rfid_uid: uid, scanned_at: scannedAt.toISOString(), kind: last.kind }, student: toStudent(student), queue_count: getUnsyncedCount() }
         }
       }
     }
 
-    const kind = determineKind(getConfig().role, student?.id ?? null, scannedAt)
     const clientEventId = randomUUID()
     getDb().prepare(`INSERT INTO scan_events (client_event_id, rfid_uid, scanned_at, kind, matched_student_id) VALUES (?, ?, ?, ?, ?)`).run(clientEventId, uid, scannedAt.toISOString(), kind, student?.id ?? null)
     if (student) void speak(greeting(kind, student))
