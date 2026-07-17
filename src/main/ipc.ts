@@ -22,7 +22,7 @@ function toStudent(row: StudentRow): StudentRow & { rfid_uids_list: string[]; rf
 function findStudentByUid(uid: string): StudentRow | null { const rows = getDb().prepare('SELECT * FROM students WHERE rfid_uids LIKE ?').all(`%${uid}%`) as StudentRow[]; return rows.find((row) => parseUids(row.rfid_uids).includes(uid)) ?? null }
 function findStudentByCode(code: string): StudentRow | null { return getDb().prepare('SELECT * FROM students WHERE student_code = ?').get(code.trim()) as StudentRow | null ?? null }
 
-const SCAN_COOLDOWN_MS = 30 * 60 * 1000 // 30 minutes
+function getScanCooldownMs(): number { const minutes = Number(getConfig().scan_cooldown_minutes); return (Number.isFinite(minutes) && minutes >= 0 ? minutes : 30) * 60 * 1000 }
 
 function findLastScanToday(studentId: string, scannedAt: Date): { kind: 'entry' | 'exit'; scanned_at: string } | null {
   const dayStart = new Date(scannedAt); dayStart.setHours(0, 0, 0, 0)
@@ -66,7 +66,7 @@ export function registerIpcHandlers(): void {
       const last = findLastScanToday(student.id, scannedAt)
       if (last) {
         const msSinceLast = scannedAt.getTime() - new Date(last.scanned_at).getTime()
-        if (msSinceLast < SCAN_COOLDOWN_MS) {
+        if (msSinceLast < getScanCooldownMs()) {
           // ยังอยู่ใน cooldown → duplicate, return kind เดิม
           return { ok: true, duplicate: true, event: { client_event_id: '', rfid_uid: uid, scanned_at: scannedAt.toISOString(), kind: last.kind }, student: toStudent(student), queue_count: getUnsyncedCount() }
         }
