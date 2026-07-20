@@ -22,6 +22,9 @@ export interface AppConfig {
   kiosk_lock: string
   tts_enabled: string
   auto_start: string
+  update_window_start: string
+  update_window_end: string
+  update_auto_install: string
   app_version?: string
   target_version?: string   // server อนุญาตให้ติดตั้งได้ถึงเวอร์ชันนี้ (per-school) — sync จาก heartbeat
 }
@@ -31,7 +34,8 @@ const DEFAULTS: AppConfig = {
   base_url: IS_DEV ? 'http://localhost:3000' : 'https://krudee.workitdee.com', role: 'both',
   exit_after_hour: String(DEFAULT_EXIT_AFTER_HOUR), late_after: '08:30', scan_cooldown_minutes: String(DEFAULT_COOLDOWN_MINUTES),
   greeting_entry: DEFAULT_GREETING_ENTRY, greeting_exit: DEFAULT_GREETING_EXIT,
-  kiosk_lock: 'false', tts_enabled: 'true', auto_start: 'false'
+  kiosk_lock: 'false', tts_enabled: 'true', auto_start: 'false',
+  update_window_start: '12:00', update_window_end: '13:00', update_auto_install: 'true'
 }
 
 export function getConfigValue(key: string): string | undefined {
@@ -60,7 +64,7 @@ export function getConfig(): AppConfig {
 }
 
 // เฉพาะ key ที่ renderer ต้องเห็น — ห้ามหลุด device_token / setup_token / admin_pin_hash เด็ดขาด
-const SAFE_KEYS = ['base_url', 'school_code', 'school_name', 'device_name', 'device_id', 'role', 'exit_after_hour', 'late_after', 'scan_cooldown_minutes', 'greeting_entry', 'greeting_exit', 'kiosk_lock', 'tts_enabled', 'auto_start', 'app_version'] as const
+const SAFE_KEYS = ['base_url', 'school_code', 'school_name', 'device_name', 'device_id', 'role', 'exit_after_hour', 'late_after', 'scan_cooldown_minutes', 'greeting_entry', 'greeting_exit', 'kiosk_lock', 'tts_enabled', 'auto_start', 'app_version', 'target_version', 'update_window_start', 'update_window_end', 'update_auto_install'] as const
 export type SafeConfig = Pick<AppConfig, (typeof SAFE_KEYS)[number]>
 export function getSafeConfig(): SafeConfig {
   const config = getConfig()
