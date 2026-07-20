@@ -16,3 +16,20 @@ export function shouldDownload(newVersion: string, targetVersion: string | undef
   if (!targetVersion) return false
   return compareVersions(newVersion, targetVersion) <= 0
 }
+
+export interface InstallDecision {
+  now: Date; windowStart: string; windowEnd: string; autoInstall: boolean
+  pendingVersion: string | null; targetVersion: string | undefined
+  lastScanAt: string | null; idleMs: number
+}
+
+function minutes(hhmm: string): number { const [h, m] = hhmm.split(':').map((n) => Number.parseInt(n, 10)); return (h || 0) * 60 + (m || 0) }
+
+export function shouldInstallNow(p: InstallDecision): boolean {
+  if (!p.autoInstall || !p.pendingVersion) return false
+  if (shouldDownload(p.pendingVersion, p.targetVersion) === false) return false
+  const cur = p.now.getHours() * 60 + p.now.getMinutes()
+  if (cur < minutes(p.windowStart) || cur > minutes(p.windowEnd)) return false
+  if (p.lastScanAt && p.now.getTime() - new Date(p.lastScanAt).getTime() < p.idleMs) return false
+  return true
+}
