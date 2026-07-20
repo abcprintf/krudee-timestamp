@@ -1,7 +1,7 @@
 import cron, { ScheduledTask } from 'node-cron'
 import { app } from 'electron'
 import { apiFetchRaw } from '../api/client'
-import { getConfig, isConfigured } from '../config'
+import { getConfig, isConfigured, setConfigValue } from '../config'
 import { getDb } from '../db/client'
 import { log, logError } from '../logger'
 import { syncAttendance } from './attendance'
@@ -49,6 +49,7 @@ export async function syncNow(): Promise<{ attendance: Awaited<ReturnType<typeof
       heartbeat = true
       const serverDate = response.headers.get('date')
       if (serverDate) clockSkew = { skew_ms: Date.now() - new Date(serverDate).getTime(), checked_at: new Date().toISOString() }
+      try { const body = response._data as { target_version?: string } | undefined; if (typeof body?.target_version === 'string' && body.target_version) setConfigValue('target_version', body.target_version) } catch { /* server รุ่นเก่าไม่ส่ง body — คงค่าเดิม */ }
     } catch (error) { logError('heartbeat', error) }
     return { attendance, heartbeat }
   } finally { running = false }

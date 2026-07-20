@@ -40,5 +40,6 @@ const api = {
     },
     install: () => ipcRenderer.invoke('updater:install'),
   },
+  app: { quit: () => ipcRenderer.invoke('app:quit') },
 }
 contextBridge.exposeInMainWorld('krudee', api)

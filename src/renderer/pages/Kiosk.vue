@@ -18,10 +18,26 @@ const schoolName = ref('')
 const rfidConnected = ref(false)
 const online = ref(navigator.onLine)
 const scanHistory = ref<ScanHistoryRow[]>([])
+const showQuitPin = ref(false)
+const quitPin = ref('')
+const quitError = ref('')
 let clearTimer: number | undefined
 let unsubRfid: (() => void) | null = null
 
 function refocusInput(): void { void nextTick(() => inputRef.value?.focus()) }
+
+function goAdmin(): void { void router.push('/admin') }
+
+function openQuitPin(): void { quitPin.value = ''; quitError.value = ''; showQuitPin.value = true }
+function closeQuitPin(): void { showQuitPin.value = false; quitPin.value = ''; quitError.value = ''; refocusInput() }
+
+async function confirmQuit(): Promise<void> {
+  quitError.value = ''
+  const result = await window.krudee.admin.verifyPin(quitPin.value)
+  if (result.ok) { await window.krudee.app.quit(); return }
+  quitError.value = result.locked ? `ใส่ผิดหลายครั้ง ลองใหม่ใน ${result.retry_in_s} วินาที` : 'PIN ไม่ถูกต้อง'
+  quitPin.value = ''
+}
 
 function resetLater(): void {
   window.clearTimeout(clearTimer)
@@ -125,6 +141,8 @@ onBeforeUnmount(() => {
           <span class="rfid-dot" />{{ rfidConnected ? 'เครื่องแตะบัตรพร้อม' : 'ไม่พบเครื่องแตะบัตร' }}
         </span>
         <QueueBadge :count="queueCount" :syncing="syncing" @sync="syncNow" />
+        <button class="topbar-btn" @click.stop="goAdmin">โหมดผู้ดูแล</button>
+        <button class="topbar-btn topbar-btn--danger" @click.stop="openQuitPin">ปิดโปรแกรม</button>
         <button v-if="isDev" class="dev-clear-btn" @click.stop="devClearScans">[DEV] ล้างแตะบัตร</button>
       </div>
     </div>
@@ -157,6 +175,27 @@ onBeforeUnmount(() => {
     <div v-if="feedback.kind === 'unknown'" class="unknown-overlay" role="alert">
       ไม่พบรหัสนักเรียนนี้ → ใช้โหมดผู้ดูแล
     </div>
+
+    <div v-if="showQuitPin" class="quit-overlay" @click.stop="closeQuitPin">
+      <div class="quit-card card" @click.stop>
+        <h2>ปิดโปรแกรม</h2>
+        <p class="muted">ใส่ PIN ผู้ดูแลเพื่อยืนยันการปิดโปรแกรม</p>
+        <input
+          v-model="quitPin"
+          class="quit-input"
+          type="password"
+          inputmode="numeric"
+          placeholder="PIN ผู้ดูแล"
+          autocomplete="off"
+          @keydown.enter.prevent="confirmQuit"
+        />
+        <p v-if="quitError" class="quit-error">{{ quitError }}</p>
+        <div class="quit-actions">
+          <button class="quit-btn quit-btn--ghost" @click.stop="closeQuitPin">ยกเลิก</button>
+          <button class="quit-btn quit-btn--danger" @click.stop="confirmQuit">ปิดโปรแกรม</button>
+        </div>
+      </div>
+    </div>
   </main>
 </template>
 
@@ -181,6 +220,21 @@ onBeforeUnmount(() => {
 .unknown-overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 32px; color: white; background: rgba(185, 28, 28, .9); font-size: clamp(38px, 7vw, 88px); font-weight: 800; text-align: center; pointer-events: none; }
 .dev-clear-btn { font-size: 11px; padding: 4px 10px; border-radius: 6px; border: 1px solid #f59e0b; color: #92400e; background: #fffbeb; cursor: pointer; font-weight: 600; }
 .dev-clear-btn:hover { background: #fef3c7; }
+.topbar-btn { font-size: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid #cbd5e1; color: #334155; background: #f8fafc; cursor: pointer; font-weight: 600; }
+.topbar-btn:hover { background: #eef2f7; }
+.topbar-btn--danger { border-color: #fecaca; color: #b91c1c; background: #fef2f2; }
+.topbar-btn--danger:hover { background: #fee2e2; }
+.quit-overlay { position: fixed; inset: 0; display: grid; place-items: center; padding: 32px; background: rgba(15, 23, 42, .55); z-index: 50; }
+.quit-card { width: 100%; max-width: 360px; padding: 28px; text-align: center; display: grid; gap: 14px; }
+.quit-card h2 { margin: 0; font-size: 24px; color: #0f172a; }
+.quit-input { width: 100%; box-sizing: border-box; font-size: 20px; text-align: center; padding: 12px 16px; border: 2px solid #cbd5e1; border-radius: 10px; outline: none; letter-spacing: 4px; }
+.quit-input:focus { border-color: #2563eb; }
+.quit-error { color: #b91c1c; font-size: 14px; margin: 0; font-weight: 600; }
+.quit-actions { display: flex; gap: 12px; justify-content: center; }
+.quit-btn { font-size: 15px; padding: 10px 18px; border-radius: 10px; border: 1px solid transparent; cursor: pointer; font-weight: 600; }
+.quit-btn--ghost { border-color: #cbd5e1; color: #334155; background: white; }
+.quit-btn--danger { color: white; background: #dc2626; }
+.quit-btn--danger:hover { background: #b91c1c; }
 .scan-input-wrap { width: 100%; max-width: 460px; }
 .scan-input { width: 100%; box-sizing: border-box; font-size: 20px; text-align: center; padding: 12px 16px; border: 2px solid #cbd5e1; border-radius: 10px; outline: none; font-weight: 500; background: #f8fafc; color: #0f172a; }
 .scan-input:focus { border-color: #2563eb; background: white; }

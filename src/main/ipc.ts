@@ -166,4 +166,5 @@ export function registerIpcHandlers(): void {
     }
     triggerInstall()
   })
+  ipcMain.handle('app:quit', () => { app.quit() })
 }

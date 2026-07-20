@@ -12,7 +12,6 @@ linux:
   artifactName: ${productName}.${ext}
   target:
     - AppImage
-    - deb
   category: Education
   icon: resources/icon.png
 win:
