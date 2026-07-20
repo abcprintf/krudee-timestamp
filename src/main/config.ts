@@ -23,6 +23,7 @@ export interface AppConfig {
   tts_enabled: string
   auto_start: string
   app_version?: string
+  target_version?: string   // server อนุญาตให้ติดตั้งได้ถึงเวอร์ชันนี้ (per-school) — sync จาก heartbeat
 }
 
 const IS_DEV = process.env.NODE_ENV === 'development'
