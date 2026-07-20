@@ -12,6 +12,14 @@ const tab = ref<'summary' | 'students' | 'cards' | 'settings' | 'history' | 'cha
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.0.10',
+    date: '20 กรกฎาคม 2569',
+    added: [
+      'ปุ่ม "โหมดผู้ดูแล" บนหน้า Kiosk (มุมบนขวา) — เข้าหน้า Admin ได้โดยไม่ต้องใช้ปุ่มลัด',
+      'ปุ่ม "ปิดโปรแกรม" บนหน้า Kiosk — ต้องใส่ PIN ผู้ดูแลก่อนปิด กันนักเรียนกดปิดเล่น',
+    ],
+  },
+  {
     version: '1.0.9',
     date: '17 กรกฎาคม 2569',
     added: [
