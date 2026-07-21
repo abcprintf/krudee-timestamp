@@ -29,12 +29,17 @@ mac:
   gatekeeperAssess: false
   notarize: true
 nsis:
-  oneClick: true
-  perMachine: true
-  allowElevation: true
+  oneClick: false
+  perMachine: false
   allowToChangeInstallationDirectory: false
-  createDesktopShortcut: true
-  createStartMenuShortcut: true
+  installerIcon: ../resources/icon.ico
+  uninstallerIcon: ../resources/icon.ico
+  uninstallDisplayName: KruDee Timestamp
+  runAfterFinish: false
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: false
+  include: installer.nsh
 publish:
   provider: github
   owner: abcprintf
