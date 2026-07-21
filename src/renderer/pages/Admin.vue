@@ -12,6 +12,16 @@ const tab = ref<'summary' | 'students' | 'cards' | 'settings' | 'history' | 'cha
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.2.1',
+    date: '21 กรกฎาคม 2569',
+    added: [
+      'แบนเนอร์เตือนบนหน้าสแกนเมื่อเครื่องใช้เวอร์ชันสูงกว่าที่เซิร์ฟเวอร์อนุญาต — เตือนแต่ยังใช้งานได้ปกติ',
+    ],
+    fixed: [
+      'รายงานเวอร์ชันจริงของแอปที่รันอยู่ไปยังเซิร์ฟเวอร์ทุกรอบ heartbeat — เซิร์ฟเวอร์ตรวจจับการติดตั้งเวอร์ชันเองได้แล้ว',
+    ],
+  },
+  {
     version: '1.2.0',
     date: '21 กรกฎาคม 2569',
     added: [

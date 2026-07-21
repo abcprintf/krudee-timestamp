@@ -5,7 +5,7 @@ import { closeDb, getDb } from './db/client'
 import { registerIpcHandlers } from './ipc'
 import { registerStudentPhotoProtocol } from './photos'
 import { startScheduler, stopScheduler } from './sync/scheduler'
-import { getConfig } from './config'
+import { getConfig, setConfigValue } from './config'
 import { setAutoLaunch } from './auto-launch'
 import { initUpdater } from './updater'
 
@@ -37,7 +37,7 @@ function createWindow(): void {
 
 app.whenReady().then(async () => {
   if (process.platform === 'darwin' && app.dock) app.dock.setIcon(join(__dirname, '../../resources/icon.png'))
-  getDb(); registerStudentPhotoProtocol(); registerIpcHandlers(); startScheduler()
+  getDb(); setConfigValue('app_version', app.getVersion()); registerStudentPhotoProtocol(); registerIpcHandlers(); startScheduler()
   if (getConfig().auto_start === 'true') await setAutoLaunch(true)
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow() })
   createWindow()
