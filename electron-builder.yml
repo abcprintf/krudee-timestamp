@@ -20,6 +20,7 @@ win:
     - portable
   icon: resources/icon.ico
 mac:
+  artifactName: ${name}-${version}-${arch}.${ext}
   target:
     - dmg
     - zip
