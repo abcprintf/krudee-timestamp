@@ -12,6 +12,13 @@ const tab = ref<'summary' | 'students' | 'cards' | 'settings' | 'history' | 'cha
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.2.2',
+    date: '21 กรกฎาคม 2569',
+    fixed: [
+      'อัปเดตส่วนประกอบภายใน (Electron, node-cron, better-sqlite3) ปิดช่องโหว่ความปลอดภัยทั้งหมดที่ตรวจพบ',
+    ],
+  },
+  {
     version: '1.2.1',
     date: '21 กรกฎาคม 2569',
     added: [
