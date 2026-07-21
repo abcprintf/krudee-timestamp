@@ -39,6 +39,8 @@ const api = {
       return () => ipcRenderer.off('updater:update-downloaded', listener)
     },
     install: () => ipcRenderer.invoke('updater:install'),
+    status: () => ipcRenderer.invoke('updater:status'),
+    check: () => ipcRenderer.invoke('updater:check'),
   },
   app: { quit: () => ipcRenderer.invoke('app:quit') },
 }

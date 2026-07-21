@@ -1,6 +1,6 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { triggerInstall } from './updater'
+import { triggerInstall, getUpdateStatus, checkNow } from './updater'
 import { apiFetch, registerDevice } from './api/client'
 import { clearDeviceConfig, getConfig, getSafeConfig, isConfigured, setConfigValue, setConfigValues } from './config'
 import { getDb } from './db/client'
@@ -166,5 +166,7 @@ export function registerIpcHandlers(): void {
     }
     triggerInstall()
   })
+  ipcMain.handle('updater:status', () => getUpdateStatus())
+  ipcMain.handle('updater:check', async () => { await checkNow(); return getUpdateStatus() })
   ipcMain.handle('app:quit', () => { app.quit() })
 }
