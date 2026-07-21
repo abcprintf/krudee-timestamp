@@ -12,6 +12,13 @@ const tab = ref<'summary' | 'students' | 'cards' | 'settings' | 'history' | 'cha
 
 const changelog: { version: string; date: string; added?: string[]; fixed?: string[] }[] = [
   {
+    version: '1.1.1',
+    date: '21 กรกฎาคม 2569',
+    fixed: [
+      'ทดสอบระบบอัปเดตอัตโนมัติแบบให้เซิร์ฟเวอร์ครูดีเป็นตัวคุมเวอร์ชัน — เครื่องจะอัปเดตเป็น 1.1.1 เมื่อเซิร์ฟเวอร์ตั้ง target_version อนุญาตแล้วเท่านั้น',
+    ],
+  },
+  {
     version: '1.1.0',
     date: '20 กรกฎาคม 2569',
     added: [
