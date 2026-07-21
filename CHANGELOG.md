@@ -1,5 +1,11 @@
 # Changelog
 
+## [1.2.2] - 2026-07-21
+
+### Fixed
+- อัปเกรด Electron 33 → 43 ปิดช่องโหว่ความปลอดภัยหลายรายการ (รวม ASAR Integrity Bypass)
+- อัปเกรด node-cron 3 → 4 และ better-sqlite3 11 → 13 — `npm audit` ฝั่ง production ไม่เหลือช่องโหว่
+
 ## [1.2.1] - 2026-07-21
 
 ### Added
