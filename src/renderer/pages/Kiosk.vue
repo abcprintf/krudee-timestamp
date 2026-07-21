@@ -21,7 +21,9 @@ const scanHistory = ref<ScanHistoryRow[]>([])
 const showQuitPin = ref(false)
 const quitPin = ref('')
 const quitError = ref('')
+const versionAhead = ref(false)
 let clearTimer: number | undefined
+let versionTimer: number | undefined
 let unsubRfid: (() => void) | null = null
 
 function refocusInput(): void { void nextTick(() => inputRef.value?.focus()) }
@@ -116,10 +118,14 @@ onMounted(async () => {
   unsubRfid = window.krudee.device.onRfidStatusChange((s) => { rfidConnected.value = s.connected })
   const config = await window.krudee.config.get()
   schoolName.value = (config as { school_name?: string }).school_name ?? ''
+  // server เทียบเวอร์ชันทุกรอบ heartbeat (5 นาที) — poll ทุก 1 นาทีพอ
+  const refreshVersionStatus = async (): Promise<void> => { versionAhead.value = (await window.krudee.device.versionStatus()) === 'ahead' }
+  void refreshVersionStatus()
+  versionTimer = window.setInterval(() => { void refreshVersionStatus() }, 60_000)
 })
 
 onBeforeUnmount(() => {
-  window.clearTimeout(clearTimer); unsubRfid?.()
+  window.clearTimeout(clearTimer); window.clearInterval(versionTimer); unsubRfid?.()
   window.removeEventListener('keydown', onWindowKeydown)
   window.removeEventListener('online', onOnline)
   window.removeEventListener('offline', onOffline)
@@ -128,6 +134,9 @@ onBeforeUnmount(() => {
 
 <template>
   <main class="page kiosk-page" @click="refocusInput">
+    <div v-if="versionAhead" class="version-warning" role="alert">
+      ⚠️ เครื่องนี้ใช้เวอร์ชันที่ยังไม่ได้รับอนุญาตจากส่วนกลาง — กรุณาติดต่อผู้ดูแลระบบ KruDee
+    </div>
     <div class="topbar">
       <div>
         <strong>{{ schoolName || 'ครูดี - Timestamp' }}</strong>
@@ -202,6 +211,7 @@ onBeforeUnmount(() => {
 <style scoped>
 .kiosk-page { display: grid; grid-template-rows: auto 1fr; gap: 24px; height: 100vh; overflow: hidden; }
 .topbar { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+.version-warning { background: #fef2f2; border: 1px solid #fecaca; color: #b91c1c; border-radius: 10px; padding: 10px 14px; font-weight: 600; text-align: center; }
 .topbar strong { font-size: 28px; color: #0f172a; }
 .topbar p { margin: 4px 0 0; }
 .topbar-right { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; justify-content: flex-end; }

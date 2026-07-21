@@ -1,12 +1,12 @@
 import { app, BrowserWindow, ipcMain, shell } from 'electron'
 import { randomUUID } from 'node:crypto'
-import { triggerInstall } from './updater'
+import { triggerInstall, getUpdateStatus, checkNow } from './updater'
 import { apiFetch, registerDevice } from './api/client'
 import { clearDeviceConfig, getConfig, getSafeConfig, isConfigured, setConfigValue, setConfigValues } from './config'
 import { getDb } from './db/client'
 import { setAutoLaunch } from './auto-launch'
 import { getUnsyncedCount } from './sync/attendance'
-import { getClockSkew, scheduleSyncSoon, syncNow } from './sync/scheduler'
+import { getClockSkew, getVersionStatus, scheduleSyncSoon, syncNow } from './sync/scheduler'
 import { syncRoster } from './sync/roster'
 import { speak } from './tts'
 import { initRfidDeviceMonitor, getRfidDeviceStatus } from './rfid-device'
@@ -47,6 +47,7 @@ export function registerIpcHandlers(): void {
   initRfidDeviceMonitor()
   ipcMain.handle('device:rfid-status', () => getRfidDeviceStatus())
   ipcMain.handle('device:clock-skew', () => getClockSkew())
+  ipcMain.handle('device:version-status', () => getVersionStatus())
   ipcMain.handle('config:get', () => ({ ...getSafeConfig(), configured: isConfigured() }))
   ipcMain.handle('setup:register', async (_event, payload: SetupPayload) => {
     setConfigValues({ base_url: payload.base_url || 'http://localhost:3000', school_code: payload.school_code, device_name: payload.device_name, role: payload.role, admin_pin_hash: hashPin(payload.admin_pin), app_version: app.getVersion() })
@@ -166,5 +167,7 @@ export function registerIpcHandlers(): void {
     }
     triggerInstall()
   })
+  ipcMain.handle('updater:status', () => getUpdateStatus())
+  ipcMain.handle('updater:check', async () => { await checkNow(); return getUpdateStatus() })
   ipcMain.handle('app:quit', () => { app.quit() })
 }

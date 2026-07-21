@@ -15,7 +15,9 @@ linux:
   category: Education
   icon: resources/icon.png
 win:
-  target: nsis
+  target:
+    - nsis
+    - portable
   icon: resources/icon.ico
 mac:
   target:

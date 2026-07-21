@@ -8,6 +8,7 @@ const api = {
   device: {
     rfidStatus: () => ipcRenderer.invoke('device:rfid-status'),
     clockSkew: () => ipcRenderer.invoke('device:clock-skew'),
+    versionStatus: () => ipcRenderer.invoke('device:version-status'),
     onRfidStatusChange: (cb: (status: { connected: boolean; count: number }) => void) => {
       const listener = (_: unknown, status: { connected: boolean; count: number }) => cb(status)
       ipcRenderer.on('rfid-device-changed', listener)
@@ -39,6 +40,8 @@ const api = {
       return () => ipcRenderer.off('updater:update-downloaded', listener)
     },
     install: () => ipcRenderer.invoke('updater:install'),
+    status: () => ipcRenderer.invoke('updater:status'),
+    check: () => ipcRenderer.invoke('updater:check'),
   },
   app: { quit: () => ipcRenderer.invoke('app:quit') },
 }
