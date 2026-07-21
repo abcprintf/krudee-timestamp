@@ -14,6 +14,7 @@ let pruneTask: ScheduledTask | null = null
 let running = false
 let syncSoonTimer: NodeJS.Timeout | null = null
 let clockSkew: { skew_ms: number; checked_at: string } | null = null
+let versionStatus: 'ahead' | 'ok' | 'unknown' | null = null
 
 export function startScheduler(): void {
   if (syncTask) return
@@ -33,6 +34,9 @@ export function scheduleSyncSoon(delayMs = 8000): void {
 // นาฬิกาเครื่อง kiosk เพี้ยนบ่อย — เทียบกับ Date header ของเซิร์ฟเวอร์ทุกรอบ heartbeat (ความละเอียด ~1-2 วินาที พอสำหรับเตือน)
 export function getClockSkew(): { skew_ms: number; checked_at: string } | null { return clockSkew }
 
+// server เทียบเวอร์ชันเครื่องกับ target_version ทุกรอบ heartbeat — 'ahead' = เครื่องรันเวอร์ชันสูงกว่าที่เซิร์ฟเวอร์อนุญาต
+export function getVersionStatus(): 'ahead' | 'ok' | 'unknown' | null { return versionStatus }
+
 function pruneOldEvents(): void {
   const cutoff = new Date(Date.now() - PRUNE_AFTER_DAYS * 24 * 60 * 60 * 1000).toISOString()
   try { const { changes } = getDb().prepare('DELETE FROM scan_events WHERE synced = 1 AND scanned_at < ?').run(cutoff); if (changes > 0) log('prune', `ลบ scan_events เก่าที่ synced แล้ว ${changes} แถว`) } catch (error) { logError('prune', error) }
@@ -45,11 +49,15 @@ export async function syncNow(): Promise<{ attendance: Awaited<ReturnType<typeof
     const attendance = await syncAttendance()
     let heartbeat = false
     try {
-      const response = await apiFetchRaw('/api/device/heartbeat', { method: 'POST', body: { app_version: getConfig().app_version ?? app.getVersion() } })
+      const response = await apiFetchRaw('/api/device/heartbeat', { method: 'POST', body: { app_version: app.getVersion() } })
       heartbeat = true
       const serverDate = response.headers.get('date')
       if (serverDate) clockSkew = { skew_ms: Date.now() - new Date(serverDate).getTime(), checked_at: new Date().toISOString() }
-      try { const body = response._data as { target_version?: string } | undefined; if (typeof body?.target_version === 'string' && body.target_version) setConfigValue('target_version', body.target_version) } catch { /* server รุ่นเก่าไม่ส่ง body — คงค่าเดิม */ }
+      try {
+        const body = response._data as { target_version?: string; version_status?: string } | undefined
+        if (typeof body?.target_version === 'string' && body.target_version) setConfigValue('target_version', body.target_version)
+        if (body?.version_status === 'ahead' || body?.version_status === 'ok' || body?.version_status === 'unknown') versionStatus = body.version_status
+      } catch { /* server รุ่นเก่าไม่ส่ง body — คงค่าเดิม */ }
     } catch (error) { logError('heartbeat', error) }
     return { attendance, heartbeat }
   } finally { running = false }
