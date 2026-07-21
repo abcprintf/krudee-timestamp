@@ -15,7 +15,9 @@ linux:
   category: Education
   icon: resources/icon.png
 win:
-  target: nsis
+  target:
+    - nsis
+    - portable
   icon: resources/icon.ico
 mac:
   target:
@@ -27,9 +29,12 @@ mac:
   gatekeeperAssess: false
   notarize: true
 nsis:
-  oneClick: false
-  perMachine: false
-  allowToChangeInstallationDirectory: true
+  oneClick: true
+  perMachine: true
+  allowElevation: true
+  allowToChangeInstallationDirectory: false
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
 publish:
   provider: github
   owner: abcprintf

@@ -8,6 +8,8 @@ import { shouldDownload, shouldInstallNow } from './update-policy'
 
 let initialized = false
 let pendingVersion: string | null = null
+let availableVersion: string | null = null
+let downloadPercent = 0
 
 const IDLE_MS = 2 * 60 * 1000
 
@@ -26,18 +28,22 @@ export function initUpdater(win: BrowserWindow): void {
   autoUpdater.on('update-available', (info) => {
     const target = getConfig().target_version
     if (!shouldDownload(info.version, target)) { log('updater', `พบ ${info.version} แต่ target=${target ?? '-'} — ยังไม่โหลด`); return }
+    availableVersion = info.version
+    downloadPercent = 0
     if (win.isDestroyed()) return
     win.webContents.send('updater:update-available', { version: info.version, releaseNotes: info.releaseNotes ?? null })
     autoUpdater.downloadUpdate().catch((e) => logError('updater', 'download failed', e))
   })
 
   autoUpdater.on('download-progress', (progress) => {
+    downloadPercent = Math.round(progress.percent)
     if (win.isDestroyed()) return
-    win.webContents.send('updater:download-progress', { percent: Math.round(progress.percent) })
+    win.webContents.send('updater:download-progress', { percent: downloadPercent })
   })
 
   autoUpdater.on('update-downloaded', (info) => {
     pendingVersion = info.version
+    downloadPercent = 100
     if (win.isDestroyed()) return
     win.webContents.send('updater:update-downloaded', { version: info.version })
   })
@@ -64,5 +70,13 @@ function maybeInstall(): void {
   try { autoUpdater.quitAndInstall() } catch (e) { logError('updater', 'quitAndInstall failed', e) }
 }
 
-// ปุ่ม "ติดตั้งตอนนี้" ของแอดมิน — force ทันที
+// ปุ่ม "ติดตั้งตอนนี้" ของแอดมิน — force ทันที (ข้ามหน้าต่างเวลา แต่ยังเคารพ target_version ของเซิร์ฟเวอร์)
 export function triggerInstall(): void { try { autoUpdater.quitAndInstall() } catch (e) { logError('updater', 'quitAndInstall failed', e) } }
+
+// สถานะอัปเดตสำหรับหน้า Admin
+export function getUpdateStatus(): { enabled: boolean; current: string; target: string | null; available: string | null; downloaded: string | null; percent: number } {
+  return { enabled: app.isPackaged, current: app.getVersion(), target: getConfig().target_version ?? null, available: availableVersion, downloaded: pendingVersion, percent: downloadPercent }
+}
+
+// ปุ่ม "ตรวจหาอัปเดต" ของแอดมิน — เช็คเดี๋ยวนี้
+export async function checkNow(): Promise<void> { if (app.isPackaged) await autoUpdater.checkForUpdates() }
