@@ -29,7 +29,15 @@ mac:
 nsis:
   oneClick: false
   perMachine: false
-  allowToChangeInstallationDirectory: true
+  allowToChangeInstallationDirectory: false
+  installerIcon: ../resources/icon.ico
+  uninstallerIcon: ../resources/icon.ico
+  uninstallDisplayName: KruDee Timestamp
+  runAfterFinish: false
+  deleteAppDataOnUninstall: false
+  createDesktopShortcut: false
+  createStartMenuShortcut: false
+  include: installer.nsh
 publish:
   provider: github
   owner: abcprintf
